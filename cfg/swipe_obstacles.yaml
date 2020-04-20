@@ -1,0 +1,11 @@
+detector_fixed_node:
+    # file_name: /home/kuriatsu/MAP/nu_garden/obstacle_pose/obstacle_pose_right_circle_nine1.csv
+    # file_name: /home/kuriatsu/MAP/nu_garden/obstacle_pose/obstacle_pose_right_circle.csv
+    # file_name: /home/kuriatsu/MAP/nu_garden/obstacle_pose/obstacle_pose_center_circle.csv
+    # file_name: /home/kuriatsu/MAP/nu_garden/obstacle_pose/obstacle_pose_left_circle.csv
+    # file_name: /home/kuriatsu/MAP/nu_garden/obstacle_pose/obstacle_pose_left_circle2.csv
+    file_name: /home/kuriatsu/MAP/takeda_lab/obstacle_pose.csv
+
+    start_round: 4
+    keep_time: 2
+    pub_rate: 0.2
