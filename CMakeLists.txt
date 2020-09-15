@@ -23,7 +23,6 @@ add_message_files(
 	FILES
     RasObject.msg
     RasObjectArray.msg
-    RasWall.msg
 )
 
 generate_messages(

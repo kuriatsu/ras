@@ -10,12 +10,12 @@ double quatToYaw(const geometry_msgs::Quaternion &in_quat);
 float calcDistOfPoints(const geometry_msgs::Point &p_1, const geometry_msgs::Point &p_2);
 }
 
-struct CalcVector
+struct RasVector
 {
     float x;
     float y;
     float z;
     float len;
-    CalcVector(const geometry_msgs::Point &from, const geometry_msgs::Point &to);
-    CalcVector(const geometry_msgs::Pose &in_pose);
+    RasVector(const geometry_msgs::Point &from, const geometry_msgs::Point &to);
+    RasVector(const geometry_msgs::Pose &in_pose);
 };

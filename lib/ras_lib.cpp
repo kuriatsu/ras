@@ -42,7 +42,7 @@ float Ras::calcDistOfPoints(const geometry_msgs::Point &p_1, const geometry_msgs
     return sqrt(pow(p_1.x - p_2.x, 2) + pow(p_1.y - p_2.y, 2));
 }
 
-CalcVector::CalcVector(const geometry_msgs::Point &from, const geometry_msgs::Point &to)
+RasVector::RasVector(const geometry_msgs::Point &from, const geometry_msgs::Point &to)
 {
     x = to.x - from.x;
     y = to.y - from.y;
@@ -50,7 +50,7 @@ CalcVector::CalcVector(const geometry_msgs::Point &from, const geometry_msgs::Po
     len = sqrt(pow(x, 2) + pow(y, 2));
 }
 
-CalcVector::CalcVector(const geometry_msgs::Pose &in_pose)
+RasVector::RasVector(const geometry_msgs::Pose &in_pose)
 {
     x = cos(Ras::quatToYaw(in_pose.orientation));
     y = sin(Ras::quatToYaw(in_pose.orientation));
