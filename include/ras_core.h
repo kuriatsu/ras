@@ -10,9 +10,9 @@
 #include <shape_msgs/SolidPrimitive.h>
 
 #include "ras_lib.h"
-#include "ras_carla/RasObject.h"
-#include "ras_carla/RasObjectArray.h"
-#include <ras_carla/rasConfig.h>
+#include "ras/RasObject.h"
+#include "ras/RasObjectArray.h"
+#include <ras/rasConfig.h>
 
 #include "carla_msgs/CarlaActorList.h"
 #include "autoware_msgs/LaneArray.h"
@@ -42,7 +42,7 @@ private:
 	std::string m_ego_name;
     bool m_conservative_recognition;
 
-    std::unordered_map<int, ras_carla::RasObject> m_obj_map;
+    std::unordered_map<int, ras::RasObject> m_obj_map;
     std::map<int, std::vector<int>> m_wp_obj_map;
     geometry_msgs::Pose m_ego_pose;
     geometry_msgs::Twist m_ego_twist;
@@ -52,23 +52,23 @@ private:
     int m_brakable_wp;
     float m_wp_interval;
 
-    dynamic_reconfigure::Server<ras_carla::rasConfig> server;
-    dynamic_reconfigure::Server<ras_carla::rasConfig>::CallbackType server_callback;
+    dynamic_reconfigure::Server<ras::rasConfig> server;
+    dynamic_reconfigure::Server<ras::rasConfig>::CallbackType server_callback;
 
 public:
 	RasCore();
 
 private:
-    void callbackDynamicReconfigure(ras_carla::rasConfig &config, uint32_t lebel);
+    void callbackDynamicReconfigure(ras::rasConfig &config, uint32_t lebel);
     void subTrajectoryCallback(const autoware_msgs::LaneArray &in_array);
 	// void subActorCallback(const carla_msgs::CarlaActorList &in_actor_list);
     void subOdomCallback(const nav_msgs::Odometry &in_odom);
     void subObjCallback(const derived_object_msgs::ObjectArray &in_obj_array);
-    std::vector<int> findWpOfObj(ras_carla::RasObject &obj);
+    std::vector<int> findWpOfObj(ras::RasObject &obj);
     void manageMarkers();
-    void subShiftCallback(const ras_carla::RasObject &in_msg);
-    void calcOccupancyWp(const std::vector<int> &in_wp_vec, const ras_carla::RasObject &in_obj);
-    bool isCollideObstacle(const ras_carla::RasObject &in_obj, const int &wp);
+    void subShiftCallback(const ras::RasObject &in_msg);
+    void calcOccupancyWp(const std::vector<int> &in_wp_vec, const ras::RasObject &in_obj);
+    bool isCollideObstacle(const ras::RasObject &in_obj, const int &wp);
     int findWallWp(std::vector<int> &critical_obj_id_vec);
     void pubOccupancyWp(const geometry_msgs::Point &in_pose, const int &type);
     bool isSameDirection(const RasVector &vec_1, const RasVector &vec_2, const float &thres);

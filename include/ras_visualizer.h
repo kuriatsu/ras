@@ -10,8 +10,8 @@
 #include <jsk_rviz_plugins/PictogramArray.h>
 #include <cmath>
 
-#include "ras_carla/RasObject.h"
-#include "ras_carla/RasObjectArray.h"
+#include "ras/RasObject.h"
+#include "ras/RasObjectArray.h"
 #include "ras_lib.h"
 #include "ras_visualizer.h"
 // #include "std_msgs/Int32.h"
@@ -39,13 +39,13 @@ public:
 	void sync_jsk_box();
 
 private:
-    void subObjCallback(const ras_carla::RasObjectArray &in_obj_array);
-    void subWallCallback(const ras_carla::RasObject &in_obj);
+    void subObjCallback(const ras::RasObjectArray &in_obj_array);
+    void subWallCallback(const ras::RasObject &in_obj);
     void intMarkerCallback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
-    jsk_recognition_msgs::BoundingBox createBox(const ras_carla::RasObject &in_obj);
-    visualization_msgs::Marker createMarker(const ras_carla::RasObject &in_obj);
-    void createInteractiveMarker(ras_carla::RasObject &in_obj);
-    void setMarkerControl(visualization_msgs::InteractiveMarker &int_marker, const ras_carla::RasObject &in_obj);
-    void setMarkerToMarkerControl(visualization_msgs::InteractiveMarkerControl &control, const ras_carla::RasObject &in_obj);
-    jsk_rviz_plugins::Pictogram createPictogram(const ras_carla::RasObject &in_obj, const int &type);
+    jsk_recognition_msgs::BoundingBox createBox(const ras::RasObject &in_obj);
+    visualization_msgs::Marker createMarker(const ras::RasObject &in_obj);
+    void createInteractiveMarker(ras::RasObject &in_obj);
+    void setMarkerControl(visualization_msgs::InteractiveMarker &int_marker, const ras::RasObject &in_obj);
+    void setMarkerToMarkerControl(visualization_msgs::InteractiveMarkerControl &control, const ras::RasObject &in_obj);
+    jsk_rviz_plugins::Pictogram createPictogram(const ras::RasObject &in_obj, const int &type);
 };

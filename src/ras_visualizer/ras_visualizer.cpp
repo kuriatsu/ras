@@ -10,7 +10,7 @@ RasVisualizer::RasVisualizer(): marker_scale(1.0)
 
     sub_obj = n.subscribe("/managed_objects", 5, &RasVisualizer::subObjCallback, this);
     sub_wall = n.subscribe("/wall_object", 5, &RasVisualizer::subWallCallback, this);
-    pub_fb_obj = n.advertise<ras_carla::RasObject>("/feedback_object", 5);
+    pub_fb_obj = n.advertise<ras::RasObject>("/feedback_object", 5);
     pub_box = n.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_box", 5);
 	pub_wall = n.advertise<visualization_msgs::Marker>("/wall_marker", 1);
     pub_pictgram = n.advertise<jsk_rviz_plugins::PictogramArray>("/pictogram", 5);
@@ -23,7 +23,7 @@ RasVisualizer::~RasVisualizer()
 }
 
 
-void RasVisualizer::subObjCallback(const ras_carla::RasObjectArray &in_obj_array)
+void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
 {
     server->clear();
     jsk_recognition_msgs::BoundingBoxArray box_array;
@@ -60,14 +60,14 @@ void RasVisualizer::subObjCallback(const ras_carla::RasObjectArray &in_obj_array
 }
 
 
-void RasVisualizer::subWallCallback(const ras_carla::RasObject &in_obj)
+void RasVisualizer::subWallCallback(const ras::RasObject &in_obj)
 {
     wall_pictogram.emplace_back(createPictogram(in_obj, 3));
     wall_marker.emplace_back(createMarker(in_obj));
 }
 
 
-jsk_recognition_msgs::BoundingBox RasVisualizer::createBox(const ras_carla::RasObject &in_obj)
+jsk_recognition_msgs::BoundingBox RasVisualizer::createBox(const ras::RasObject &in_obj)
 {
     jsk_recognition_msgs::BoundingBox marker;
 
@@ -89,7 +89,7 @@ jsk_recognition_msgs::BoundingBox RasVisualizer::createBox(const ras_carla::RasO
 }
 
 
-visualization_msgs::Marker RasVisualizer::createMarker(const ras_carla::RasObject &in_obj)
+visualization_msgs::Marker RasVisualizer::createMarker(const ras::RasObject &in_obj)
 {
     visualization_msgs::Marker marker;
 
@@ -114,7 +114,7 @@ visualization_msgs::Marker RasVisualizer::createMarker(const ras_carla::RasObjec
 }
 
 
-void RasVisualizer::createInteractiveMarker(ras_carla::RasObject &in_obj)
+void RasVisualizer::createInteractiveMarker(ras::RasObject &in_obj)
 {
     // for debag
     // std::cout <<"ss id is:" << in_obj.id << std::endl;
@@ -137,7 +137,7 @@ void RasVisualizer::createInteractiveMarker(ras_carla::RasObject &in_obj)
 }
 
 
-void RasVisualizer::setMarkerControl(visualization_msgs::InteractiveMarker &int_marker, const ras_carla::RasObject &in_obj)
+void RasVisualizer::setMarkerControl(visualization_msgs::InteractiveMarker &int_marker, const ras::RasObject &in_obj)
 {
 	visualization_msgs::InteractiveMarkerControl control;
 
@@ -149,7 +149,7 @@ void RasVisualizer::setMarkerControl(visualization_msgs::InteractiveMarker &int_
 }
 
 
-void RasVisualizer::setMarkerToMarkerControl(visualization_msgs::InteractiveMarkerControl &control, const ras_carla::RasObject &in_obj)
+void RasVisualizer::setMarkerToMarkerControl(visualization_msgs::InteractiveMarkerControl &control, const ras::RasObject &in_obj)
 {
     visualization_msgs::Marker marker;
 
@@ -179,7 +179,7 @@ void RasVisualizer::setMarkerToMarkerControl(visualization_msgs::InteractiveMark
 }
 
 
-jsk_rviz_plugins::Pictogram RasVisualizer::createPictogram(const ras_carla::RasObject &in_obj, const int &type)
+jsk_rviz_plugins::Pictogram RasVisualizer::createPictogram(const ras::RasObject &in_obj, const int &type)
 {
     jsk_rviz_plugins::Pictogram pictogram;
     geometry_msgs::Pose arrow_pose;
@@ -291,7 +291,7 @@ jsk_rviz_plugins::Pictogram RasVisualizer::createPictogram(const ras_carla::RasO
 
 void RasVisualizer::intMarkerCallback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback)
 {
-    ras_carla::RasObject feedback_obj;
+    ras::RasObject feedback_obj;
     std::istringstream sis;
 
     std::istringstream(feedback->marker_name) >> feedback_obj.object.id;

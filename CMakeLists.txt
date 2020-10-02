@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(ras_carla)
+project(ras)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
   carla_msgs
   jsk_rviz_plugins
+  radar_msgs
+  shape_msgs
 )
 
 ## Generate messages in the 'msg' folder

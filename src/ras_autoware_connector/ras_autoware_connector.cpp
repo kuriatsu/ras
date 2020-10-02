@@ -12,13 +12,13 @@ RasAutowareConnector::RasAutowareConnector(): polygon_interval(0.5)//, keep_time
 }
 
 
-void RasAutowareConnector::subWallCallback(const ras_carla::RasObject &in_obj)
+void RasAutowareConnector::subWallCallback(const ras::RasObject &in_obj)
 {
     wall.emplace_back(rasToAutowareObject(in_obj));
 }
 
 
-void RasAutowareConnector::subObjCallback(const ras_carla::RasObjectArray &in_obj_array)
+void RasAutowareConnector::subObjCallback(const ras::RasObjectArray &in_obj_array)
 {
     autoware_msgs::DetectedObjectArray out_obj_array;
     autoware_msgs::DetectedObject out_obj;
@@ -26,6 +26,11 @@ void RasAutowareConnector::subObjCallback(const ras_carla::RasObjectArray &in_ob
 
     for (size_t index = 0; index < in_obj_array.objects.size(); index++)
     {
+        if (in_obj_array.objects[index].object.classification == derived_object_msgs::Object::CLASSIFICATION_UNKNOWN && in_obj_array.objects[index].is_touched)
+        {
+            continue;
+        }
+
         out_obj = rasToAutowareObject(in_obj_array.objects[index]);
         out_obj_array.objects.emplace_back(out_obj);
     }
@@ -42,7 +47,7 @@ void RasAutowareConnector::subObjCallback(const ras_carla::RasObjectArray &in_ob
 }
 
 
-autoware_msgs::DetectedObject RasAutowareConnector::rasToAutowareObject(const ras_carla::RasObject &in_obj)
+autoware_msgs::DetectedObject RasAutowareConnector::rasToAutowareObject(const ras::RasObject &in_obj)
 {
     autoware_msgs::DetectedObject out_obj;
 
@@ -88,7 +93,7 @@ autoware_msgs::DetectedObject RasAutowareConnector::rasToAutowareObject(const ra
 }
 
 
-geometry_msgs::PolygonStamped RasAutowareConnector::calcPolygon(const ras_carla::RasObject &in_obj)
+geometry_msgs::PolygonStamped RasAutowareConnector::calcPolygon(const ras::RasObject &in_obj)
 {
     geometry_msgs::Point32 point;
     geometry_msgs::PolygonStamped polygon_stamped;
