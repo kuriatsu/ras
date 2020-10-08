@@ -14,7 +14,7 @@
 #include "ras/RasObjectArray.h"
 #include <ras/rasConfig.h>
 
-#include "carla_msgs/CarlaActorList.h"
+// #include "carla_msgs/CarlaActorList.h"
 #include "autoware_msgs/LaneArray.h"
 #include "autoware_msgs/Waypoint.h"
 

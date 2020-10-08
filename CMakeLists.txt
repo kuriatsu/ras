@@ -14,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   derived_object_msgs
   dynamic_reconfigure
-  carla_msgs
   jsk_rviz_plugins
   radar_msgs
   shape_msgs

@@ -7,7 +7,7 @@ RasAutowareConnector::RasAutowareConnector(): polygon_interval(0.5)//, keep_time
 
     sub_obj = n.subscribe("/managed_objects", 5, &RasAutowareConnector::subObjCallback, this);
     sub_wall = n.subscribe("/wall_object", 5, &RasAutowareConnector::subWallCallback, this);
-    pub_obj = n.advertise<autoware_msgs::DetectedObjectArray>("/tracked_objects", 5);
+    pub_obj = n.advertise<autoware_msgs::DetectedObjectArray>("/detection/contour_tracker/objects", 5);
     // pub_polygon = n.advertise<geometry_msgs::PolygonStamped>("/ras_polygon", 10);
 }
 
