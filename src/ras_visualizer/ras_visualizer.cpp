@@ -260,7 +260,7 @@ jsk_rviz_plugins::Pictogram RasVisualizer::createPictogram(const ras::RasObject 
             pictogram.color.b = 0.0;
             pictogram.action = jsk_rviz_plugins::Pictogram::ADD;
             pictogram.mode = jsk_rviz_plugins::Pictogram::PICTOGRAM_MODE;
-            pictogram.character = "fa-long-arrow-up";
+            pictogram.character = "fa-long-arrow-alt-up";
             pictogram.size = 3;
             break;
         }
