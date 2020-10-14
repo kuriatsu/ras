@@ -8,7 +8,6 @@
 #include <derived_object_msgs/Object.h>
 #include <nav_msgs/Odometry.h>
 #include <shape_msgs/SolidPrimitive.h>
-#include <std_msgs/Float32.h>
 
 #include "ras_lib.h"
 #include "ras/RasObject.h"
@@ -21,7 +20,6 @@
 
 #include <dynamic_reconfigure/server.h>
 #include <unordered_map>
-#include <math.h>
 #include <typeinfo>
 
 class RasCore
@@ -36,7 +34,6 @@ private:
     ros::Subscriber sub_trajectory;
     ros::Publisher pub_wp_cross;
     ros::Publisher pub_wp_obj;
-    ros::Publisher pub_camera_angle;
 
     int m_keep_time;
     float m_max_vision;

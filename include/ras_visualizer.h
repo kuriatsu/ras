@@ -9,6 +9,7 @@
 #include <visualization_msgs/Marker.h>
 #include <jsk_rviz_plugins/PictogramArray.h>
 #include <cmath>
+#include <std_msgs/Float32.h>
 
 #include "ras/RasObject.h"
 #include "ras/RasObjectArray.h"
@@ -27,11 +28,13 @@ private:
     ros::Publisher pub_box;
     ros::Publisher pub_wall;
     ros::Publisher pub_pictgram;
+    ros::Publisher pub_camera_angle;
 
     std::vector<uint32_t> id_vec;
     float marker_scale;
     std::vector<jsk_rviz_plugins::Pictogram> wall_pictogram;
     std::vector<visualization_msgs::Marker> wall_marker;
+    std::string m_ego_name = "ego_vehicle";
 
 public:
     RasVisualizer();

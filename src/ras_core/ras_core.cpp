@@ -18,7 +18,6 @@ RasCore::RasCore(): m_ego_wp(0)
     pub_wall = n.advertise<ras::RasObject>("/wall_object", 1);
     pub_wp_obj = n.advertise<geometry_msgs::PointStamped>("/obj_wp", 5);
     pub_wp_cross = n.advertise<geometry_msgs::PointStamped>("/crossed_wp", 5);
-    pub_camera_angle = n.advertise<std_msgs::Float32>("/carla_camera_angle", 1);
 
     // pub_erase = n.advertise<std_msgs::Int32>("/erase_signal", 1);
 
@@ -345,8 +344,6 @@ void RasCore::manageMarkers()
     ras::RasObjectArray obj_array;
     ras::RasObject wall;
     int wall_wp;
-    std_msgs::Float32 yaw_to_critical_obj;
-    geometry_msgs::Pose critical_obj_pose;
 
     wall_wp = findWallWp(critical_obj_id_vec);
     // std::cout << "critical object : " << critical_obj_id_vec.size() << std::endl;
@@ -364,10 +361,6 @@ void RasCore::manageMarkers()
         {
             e.second.is_important = true;
             e.second.is_interaction = true;
-            critical_obj_pose = Ras::tfTransformer(e.second.object.pose, e.second.object.header.frame_id, m_ego_name);
-            yaw_to_critical_obj.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
-            pub_camera_angle.publish(yaw_to_critical_obj);
-
         }
 
         else if (e.second.is_touched)

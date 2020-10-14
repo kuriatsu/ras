@@ -14,6 +14,7 @@ RasVisualizer::RasVisualizer(): marker_scale(1.0)
     pub_box = n.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_box", 5);
 	pub_wall = n.advertise<visualization_msgs::Marker>("/wall_marker", 1);
     pub_pictgram = n.advertise<jsk_rviz_plugins::PictogramArray>("/pictogram", 5);
+    pub_camera_angle = n.advertise<std_msgs::Float32>("/carla_camera_angle", 1);
 }
 
 
@@ -70,6 +71,8 @@ void RasVisualizer::subWallCallback(const ras::RasObject &in_obj)
 jsk_recognition_msgs::BoundingBox RasVisualizer::createBox(const ras::RasObject &in_obj)
 {
     jsk_recognition_msgs::BoundingBox marker;
+    geometry_msgs::Pose critical_obj_pose;
+    std_msgs::Float32 yaw_to_critical_obj;
 
     marker.header = in_obj.object.header;
     marker.label = in_obj.object.id;
@@ -84,7 +87,18 @@ jsk_recognition_msgs::BoundingBox RasVisualizer::createBox(const ras::RasObject 
         marker.pose.position.z += in_obj.object.shape.dimensions[2] / 2;
     }
 
-    marker.value = (in_obj.is_important) ? 100.0 : 50.0;
+    if (in_obj.is_important)
+    {
+        marker.value = 100.0;
+        critical_obj_pose = Ras::tfTransformer(in_obj.object.pose, in_obj.object.header.frame_id, m_ego_name);
+        yaw_to_critical_obj.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
+        pub_camera_angle.publish(yaw_to_critical_obj);
+    }
+    else
+    {
+        marker.value = 50.0;
+
+    }
     return marker;
 }
 
