@@ -40,6 +40,8 @@ private:
     float m_min_vision;
 	std::string m_ego_name;
     bool m_conservative_recognition;
+    float m_decel;
+    float m_emergency_decel;
 
     std::unordered_map<int, ras::RasObject> m_obj_map;
     std::map<int, std::vector<int>> m_wp_obj_map;

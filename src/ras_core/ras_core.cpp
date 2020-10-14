@@ -33,6 +33,8 @@ void RasCore::callbackDynamicReconfigure(ras::rasConfig &config, uint32_t lebel)
     m_min_vision = config.min_vision_range;
     m_keep_time = config.keep_time;
     m_ego_name = config.ego_name;
+    m_decel = config.decel;
+    m_emergency_decel = config.emergency_decel;
 }
 
 // get ego_vehicle id to remove ego_object from obstacles
@@ -58,9 +60,9 @@ void RasCore::subOdomCallback(const nav_msgs::Odometry &in_odom)
     // std::cout << (int)(100.0 / m_wp_interval) << std::endl;
     // find closest waypoint from m_waypoints
     // for (size_t i = m_ego_wp; i < m_ego_wp + (int)(m_max_vision / m_wp_interval); i++)
-    for (size_t i = 0; i < m_wps_vec.size(); i++)
+    for (size_t i = 0; i < m_waypoint.size(); i++)
     {
-        dist = pow(m_ego_pose.position.x - m_wps_vec[i].position.x, 2) + pow(m_ego_pose.position.y - m_wps_vec[i].position.y, 2);
+        dist = pow(m_ego_pose.position.x - m_waypoint[i].position.x, 2) + pow(m_ego_pose.position.y - m_waypoint[i].position.y, 2);
         // std::cout << i << "," << dist << std::endl;
         if (min_dist_power > dist)
         {
@@ -70,15 +72,16 @@ void RasCore::subOdomCallback(const nav_msgs::Odometry &in_odom)
     }
 
     m_ego_wp = ego_wp;
-    m_brakable_wp = ego_wp + (int)((pow(m_ego_twist.linear.x * 3.6, 2) / (254 * 0.7)) / m_wp_interval);
-    for (const auto &e : m_wp_obj_map[ego_wp])
-    {
-        // ROS_INFO_STREAM(m_obj_map[e]);
-        // std::cout << "on : "<< e  << std::endl;
-        m_obj_map[e].is_touched = false;
-        // std::cout << "to"<< std::endl;
-        // ROS_INFO_STREAM(m_obj_map[e]);
-    }
+    m_brake_wp = ego_wp + (int)((pow(m_ego_twist.linear.x * 3.6, 2) / (2.0 * 9.8 * m_decel)) / m_wp_interval);
+    m_emergency_wp = ego_wp + (int)((pow(m_ego_twist.linear.x * 3.6, 2) / (2.0 * 9.8 * m_emergency_decel)) / m_wp_interval);
+//     for (const auto &e : m_wp_obj_map[ego_wp])
+//     {
+//         // ROS_INFO_STREAM(m_obj_map[e]);
+//         // std::cout << "on : "<< e  << std::endl;
+//         m_obj_map[e].is_touched = false;
+//         // std::cout << "to"<< std::endl;
+//         // ROS_INFO_STREAM(m_obj_map[e]);
+//     }
 }
 
 
@@ -92,19 +95,23 @@ void RasCore::subTrajectoryCallback(const autoware_msgs::LaneArray &in_array)
     }
     for (const auto &itr : in_array.lanes[0].waypoints)
     {
-        m_wps_vec.emplace_back(itr.pose.pose);
+        m_waypoint.emplace_back(itr.pose.pose);
     }
-    m_wp_interval = sqrt(pow(m_wps_vec[0].position.x - m_wps_vec[1].position.x, 2) + pow(m_wps_vec[0].position.y - m_wps_vec[1].position.y, 2));
+    m_wp_interval = sqrt(pow(m_waypoint[0].position.x - m_waypoint[1].position.x, 2) + pow(m_waypoint[0].position.y - m_waypoint[1].position.y, 2));
 }
 
 
 void RasCore::subObjCallback(const derived_object_msgs::ObjectArray &in_obj_array)
 {
     // ROS_INFO("subObjCallback");
-    if (m_wps_vec.empty() || m_ego_wp == 0)
+    if (m_waypoint.empty())
     {
         ROS_ERROR("waypoint_publisher: waypoint or ego odometry is not subscrived yet");
-        std::cout << m_ego_wp << std::endl;
+        return;
+    }
+    else if(m_ego_wp == 0)
+    {
+        ROS_ERROR("ego_vehicle is far from over 9.0 m from route");
         return;
     }
 
@@ -119,23 +126,17 @@ void RasCore::subObjCallback(const derived_object_msgs::ObjectArray &in_obj_arra
         if (e.pose.position.x == 0.0 && e.pose.position.y == 0.0 && e.pose.position.z == 0.0) continue;
 
         ras_obj.object = e;
-        // ROS_INFO("get pose from ego");
         in_obj_pose = Ras::tfTransformer(ras_obj.object.pose, ras_obj.object.header.frame_id, m_ego_name);
-        // ROS_INFO("calc distance");
         ras_obj.distance = sqrt(pow(in_obj_pose.position.x, 2) + pow(in_obj_pose.position.y, 2));
         if (m_min_vision < ras_obj.distance && ras_obj.distance < m_max_vision)
-        // if (m_min_vision < ras_obj.distance && ras_obj.distance < m_max_vision && ras_obj.object.id != m_ego_id)
         {
             ras::RasObject &selected_obj = m_obj_map[ras_obj.object.id];
             selected_obj.object = ras_obj.object;
             selected_obj.distance = ras_obj.distance;
             selected_obj.is_interaction = false;
             selected_obj.is_important = false;
-            // selected_obj.is_front = (in_obj_pose.position.x > 0.5) ? true : false;
-            // selected_obj.is_same_lane = (fabs(in_obj_pose.position.y) > 0.5) ? true : false;
             calcOccupancyWp(findWpOfObj(selected_obj), selected_obj);
 
-            // std::cout << "map obj:" << e.id << "," << selected_obj.cross_wp_list[0] << std::endl;
         }
     }
     manageMarkers();
@@ -158,31 +159,31 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
             float min_dist_of_wp_obj = m_max_vision, dist_of_wp_obj;
             int close_wp, perp_wp;
             // find closest waypoint from object
-            for (auto itr = m_wps_vec.begin(); itr < m_wps_vec.end(); itr++)
-            // for (auto itr = m_wps_vec.begin(); itr != m_wps_vec.end(); itr++)
+            for (auto itr = m_waypoint.begin(); itr < m_waypoint.end(); itr++)
+            // for (auto itr = m_waypoint.begin(); itr != m_waypoint.end(); itr++)
             {
                 dist_of_wp_obj = Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position);
                 if (dist_of_wp_obj < min_dist_of_wp_obj)
                 {
                     min_dist_of_wp_obj = dist_of_wp_obj;
-                    close_wp = std::distance(m_wps_vec.begin(), itr);
+                    close_wp = std::distance(m_waypoint.begin(), itr);
                 }
             }
 
-            RasVector obj_closewp_vec(in_obj.object.pose.position, m_wps_vec[close_wp].position);
+            RasVector obj_closewp_vec(in_obj.object.pose.position, m_waypoint[close_wp].position);
             RasVector obj_vec(in_obj.object.pose);
 
             if (isSameDirection(obj_closewp_vec, obj_vec, 0.7))
             {
                 // std::cout << "obj_id : " << in_obj.object.id << " wp : " << close_wp << "close" << std::endl;
                 wp_vec.emplace_back(close_wp);
-                pubOccupancyWp(m_wps_vec[close_wp].position, 0);
+                pubOccupancyWp(m_waypoint[close_wp].position, 0);
             }
 
             // find perpendicular waypoint from close waypoint and object
-            for (auto itr = m_wps_vec.begin(); itr != m_wps_vec.end(); itr++)
+            for (auto itr = m_waypoint.begin(); itr != m_waypoint.end(); itr++)
             {
-                perp_wp = std::distance(m_wps_vec.begin(), itr);
+                perp_wp = std::distance(m_waypoint.begin(), itr);
 
                 if(perp_wp == 0) continue;
                 if(perp_wp == close_wp) continue;
@@ -198,7 +199,7 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
                     {
                         // std::cout << "obj_id : " << in_obj.object.id << " wp : " << perp_wp << "cross" << std::endl;
                         wp_vec.emplace_back(perp_wp);
-                        pubOccupancyWp(m_wps_vec[perp_wp].position, 1);
+                        pubOccupancyWp(m_waypoint[perp_wp].position, 1);
                     }
                 }
             }
@@ -210,13 +211,13 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
             float obj_vec_x, obj_vec_y, obj_wp_vec_x, obj_wp_vec_y, inner_prod, dist_of_wp_obj;
             RasVector obj_vec(in_obj.object.pose);
             // std::cout << obj_vec.x << ", " << obj_vec.y << ", " << obj_vec.len << std::endl;
-            for (auto itr = m_wps_vec.begin(); itr != m_wps_vec.end(); itr ++)
+            for (auto itr = m_waypoint.begin(); itr != m_waypoint.end(); itr ++)
             {
                 RasVector obj_wp_vec(in_obj.object.pose.position, itr->position);
                 if (isSameDirection(obj_vec, obj_wp_vec, 0.999))
                 {
-                    pubOccupancyWp(m_wps_vec[std::distance(m_wps_vec.begin(), itr)].position, 1);
-                    wp_vec.emplace_back(std::distance(m_wps_vec.begin(), itr));
+                    pubOccupancyWp(m_waypoint[std::distance(m_waypoint.begin(), itr)].position, 1);
+                    wp_vec.emplace_back(std::distance(m_waypoint.begin(), itr));
                     // break;
                 }
             }
@@ -228,18 +229,18 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
         //     float min_dist_of_wp_obj = m_max_vision, dist_of_wp_obj;
         //     int close_wp;
         //     // find closest waypoint from object
-        //     for (auto itr = m_wps_vec.begin(); itr < m_wps_vec.end(); itr++)
-        //     // for (auto itr = m_wps_vec.begin(); itr != m_wps_vec.end(); itr++)
+        //     for (auto itr = m_waypoint.begin(); itr < m_waypoint.end(); itr++)
+        //     // for (auto itr = m_waypoint.begin(); itr != m_waypoint.end(); itr++)
         //     {
         //         dist_of_wp_obj = Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position);
         //         if (dist_of_wp_obj < min_dist_of_wp_obj)
         //         {
         //             min_dist_of_wp_obj = dist_of_wp_obj;
-        //             close_wp = std::distance(m_wps_vec.begin(), itr);
+        //             close_wp = std::distance(m_waypoint.begin(), itr);
         //         }
         //     }
         //     wp_vec.emplace_back(close_wp);
-        //     pubOccupancyWp(m_wps_vec[close_wp].position, 0);
+        //     pubOccupancyWp(m_waypoint[close_wp].position, 0);
         }
     }
     return wp_vec;
@@ -268,7 +269,7 @@ bool RasCore::isCollideObstacle(const ras::RasObject &in_obj, const int &wp)
 {
     float dist_of_wp_ego, dist_of_wp_obj;
     dist_of_wp_ego = (wp - m_ego_wp) * m_wp_interval;
-    dist_of_wp_obj = Ras::calcDistOfPoints(in_obj.object.pose.position, m_wps_vec[wp].position);
+    dist_of_wp_obj = Ras::calcDistOfPoints(in_obj.object.pose.position, m_waypoint[wp].position);
 
     if (wp > m_ego_wp + m_max_vision / m_wp_interval || in_obj.is_touched)
     return false;
@@ -315,7 +316,7 @@ int RasCore::findWallWp(std::vector<int> &critical_obj_id_vec)
 {
     for (const auto &e : m_wp_obj_map)
     {
-        if (e.first < m_brakable_wp) continue;
+        if (e.first < m_brake_wp) continue;
         // std::cout << e.first << std::endl;
         critical_obj_id_vec.clear();
 
@@ -384,7 +385,7 @@ void RasCore::manageMarkers()
         wall.object.header.stamp = obj_array.header.stamp;
         wall.object.header.frame_id = obj_array.header.frame_id;
         wall.object.id = obj_array.objects.back().object.id + 1;
-        wall.object.pose = m_wps_vec[wall_wp];
+        wall.object.pose = m_waypoint[wall_wp];
         wall.object.shape.type = shape_msgs::SolidPrimitive::BOX;
         wall.object.shape.dimensions.emplace_back(0.1);
         wall.object.shape.dimensions.emplace_back(5.0);
