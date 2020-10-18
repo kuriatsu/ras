@@ -41,13 +41,14 @@ private:
     float m_min_vision;
 	std::string m_ego_name;
     bool m_conservative_recognition;
+    float m_detection_level_thres;
 
     std::unordered_map<int, ras::RasObject> m_obj_map;
     std::map<int, std::vector<int>> m_wp_obj_map;
     geometry_msgs::Pose m_ego_pose;
     geometry_msgs::Twist m_ego_twist;
     int m_ego_id;
-    std::vector<geometry_msgs::Pose> m_wps_vec;
+    std::vector<geometry_msgs::Pose> m_waypoints;
     int m_ego_wp;
     int m_brakable_wp;
     float m_wp_interval;
