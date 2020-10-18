@@ -104,10 +104,14 @@ void RasCore::subTrajectoryCallback(const autoware_msgs::LaneArray &in_array)
 void RasCore::subObjCallback(const derived_object_msgs::ObjectArray &in_obj_array)
 {
     // ROS_INFO("subObjCallback");
-    if (m_waypoints.empty() || m_ego_wp == 0)
+    if (m_waypoint.empty())
     {
         ROS_ERROR("waypoint_publisher: waypoint or ego odometry is not subscrived yet");
-        std::cout << m_ego_wp << std::endl;
+        return;
+    }
+    else if(m_ego_wp == 0)
+    {
+        ROS_ERROR("ego_vehicle is far from over 9.0 m from route");
         return;
     }
 
@@ -122,23 +126,17 @@ void RasCore::subObjCallback(const derived_object_msgs::ObjectArray &in_obj_arra
         if (e.pose.position.x == 0.0 && e.pose.position.y == 0.0 && e.pose.position.z == 0.0) continue;
 
         ras_obj.object = e;
-        // ROS_INFO("get pose from ego");
         in_obj_pose = Ras::tfTransformer(ras_obj.object.pose, ras_obj.object.header.frame_id, m_ego_name);
-        // ROS_INFO("calc distance");
         ras_obj.distance = sqrt(pow(in_obj_pose.position.x, 2) + pow(in_obj_pose.position.y, 2));
         if (m_min_vision < ras_obj.distance && ras_obj.distance < m_max_vision)
-        // if (m_min_vision < ras_obj.distance && ras_obj.distance < m_max_vision && ras_obj.object.id != m_ego_id)
         {
             ras::RasObject &selected_obj = m_obj_map[ras_obj.object.id];
             selected_obj.object = ras_obj.object;
             selected_obj.distance = ras_obj.distance;
             selected_obj.is_interaction = false;
             selected_obj.is_important = false;
-            // selected_obj.is_front = (in_obj_pose.position.x > 0.5) ? true : false;
-            // selected_obj.is_same_lane = (fabs(in_obj_pose.position.y) > 0.5) ? true : false;
             calcOccupancyWp(findWpOfObj(selected_obj), selected_obj);
 
-            // std::cout << "map obj:" << e.id << "," << selected_obj.cross_wp_list[0] << std::endl;
         }
     }
     manageMarkers();
@@ -341,7 +339,7 @@ int RasCore::findWallWp(std::vector<int> &critical_obj_id_vec)
 {
     for (const auto &e : m_wp_obj_map)
     {
-        if (e.first < m_brakable_wp) continue;
+        if (e.first < m_brake_wp) continue;
         // std::cout << e.first << std::endl;
         critical_obj_id_vec.clear();
 

@@ -20,7 +20,6 @@
 
 #include <dynamic_reconfigure/server.h>
 #include <unordered_map>
-#include <math.h>
 #include <typeinfo>
 
 class RasCore
