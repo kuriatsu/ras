@@ -52,9 +52,9 @@ RasVector::RasVector(const geometry_msgs::Point &from, const geometry_msgs::Poin
 
 RasVector::RasVector(const geometry_msgs::Twist &in_twist)
 {
-    x = twist.x;
-    y = twist.y;
-    z = twist.z;
+    x = in_twist.linear.x;
+    y = in_twist.linear.y;
+    z = in_twist.linear.z;
     len = sqrt(pow(x, 2) + pow(y, 2));
 }
 

@@ -17,7 +17,8 @@ RasCore::RasCore(): m_ego_wp(0)
     pub_obj = n.advertise<ras::RasObjectArray>("/managed_objects", 5);
     pub_wall = n.advertise<ras::RasObject>("/wall_object", 1);
     pub_wp_obj = n.advertise<geometry_msgs::PointStamped>("/obj_wp", 5);
-    pub_wp_cross = n.advertise<geometry_msgs::PointStamped>("/crossed_wp", 5);
+    pub_wp_cross_twist = n.advertise<geometry_msgs::PointStamped>("/cross_twist_wp", 5);
+    pub_wp_cross_pose = n.advertise<geometry_msgs::PointStamped>("/cross_pose_wp", 5);
 
     // pub_erase = n.advertise<std_msgs::Int32>("/erase_signal", 1);
 
@@ -74,14 +75,7 @@ void RasCore::subOdomCallback(const nav_msgs::Odometry &in_odom)
     m_brakable_wp = ego_wp + (int)((pow(m_ego_twist.linear.x, 2) / (2 * 9.8 * 0.2)) / m_wp_interval);
     // m_brakable_wp = ego_wp + (int)((pow(m_ego_twist.linear.x, 2) / (2 * 9.8 * 0.3)));
     // m_brakable_wp = ego_wp + (int)((pow(m_ego_twist.linear.x * 3.6, 2) / (254 * 0.7)) / m_wp_interval);
-    for (const auto &e : m_wp_obj_map[ego_wp])
-    {
-        // ROS_INFO_STREAM(m_obj_map[e]);
-        // std::cout << "on : "<< e  << std::endl;
-        m_obj_map[e].is_touched = false;
-        // std::cout << "to"<< std::endl;
-        // ROS_INFO_STREAM(m_obj_map[e]);
-    }
+
 }
 
 
@@ -104,7 +98,7 @@ void RasCore::subTrajectoryCallback(const autoware_msgs::LaneArray &in_array)
 void RasCore::subObjCallback(const derived_object_msgs::ObjectArray &in_obj_array)
 {
     // ROS_INFO("subObjCallback");
-    if (m_waypoint.empty())
+    if (m_waypoints.empty())
     {
         ROS_ERROR("waypoint_publisher: waypoint or ego odometry is not subscrived yet");
         return;
@@ -135,7 +129,7 @@ void RasCore::subObjCallback(const derived_object_msgs::ObjectArray &in_obj_arra
             selected_obj.distance = ras_obj.distance;
             selected_obj.is_interaction = false;
             selected_obj.is_important = false;
-            calcOccupancyWp(findWpOfObj(selected_obj), selected_obj);
+            addObjIdToOccupancyWp(findWpOfObj(selected_obj), selected_obj);
 
         }
     }
@@ -157,40 +151,59 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
         {
             // ROS_INFO("findWpOfObj pedestrian");
             float min_dist_of_wp_obj = m_max_vision, dist_of_wp_obj;
-            int close_wp, perp_wp, cross_wp;
-            RasVector obj_vec(in_obj.object.twist);
+            int close_wp = 0, twist_cross_wp = 0, pose_cross_wp = 0;
+            RasVector obj_twist_vec(in_obj.object.twist);
+            RasVector obj_pose_vec(in_obj.object.pose);
 
-            // find closest waypoint from object
             for (auto itr = m_waypoints.begin(); itr < m_waypoints.end(); itr++)
-            // for (auto itr = m_waypoints.begin(); itr != m_waypoints.end(); itr++)
             {
+
+
+                // find crossing waypoint with object twist
+                RasVector obj_wp_vec(in_obj.object.pose.position, itr->position);
+
+                if (isSameDirection(obj_wp_vec, obj_twist_vec, 0.9999))
+                {
+                    // std::cout << "obj_id : " << in_obj.object.id << " wp : " << close_wp << "close" << std::endl;
+                    twist_cross_wp = std::distance(m_waypoints.begin(), itr);
+                    obj_waypoints.emplace_back(twist_cross_wp);
+                    pubOccupancyWp(m_waypoints[twist_cross_wp].position, 1);
+                }
+
                 dist_of_wp_obj = Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position);
+
+
+                if (in_obj.object.detection_level < m_detection_level_thres) continue;
+
+                // find closest waypoint from object
                 if (dist_of_wp_obj < min_dist_of_wp_obj)
                 {
                     min_dist_of_wp_obj = dist_of_wp_obj;
                     close_wp = std::distance(m_waypoints.begin(), itr);
                 }
 
-                RasVector obj_wp_vec(in_obj.object.pose.position, itr->position);
-
-                if (isSameDirection(obj_wp_vec, obj_vec, 0.9999))
+                // find crossing waypoint with object pose
+                if (isSameDirection(obj_wp_vec, obj_pose_vec, 0.9999))
                 {
-                    // std::cout << "obj_id : " << in_obj.object.id << " wp : " << close_wp << "close" << std::endl;
-                    cross_wp = std::distance(m_waypoints.begin(), itr);
-                    obj_waypoints.emplace_back(cross_wp);
-                    pubOccupancyWp(m_waypoints[cross_wp].position, 1);
+                    pose_cross_wp = std::distance(m_waypoints.begin(), itr);
+                    obj_waypoints.emplace_back(pose_cross_wp);
+                    pubOccupancyWp(m_waypoints[pose_cross_wp].position, 2);
                 }
             }
 
-            // RasVector obj_vec(in_obj.object.pose);
-            RasVector obj_wp_vec(in_obj.object.pose.position, m_waypoints[close_wp].position);
-
-            if (isSameDirection(obj_vec, obj_wp_vec, 0.0))
+            if (close_wp != 0 && in_obj.object.detection_level < m_detection_level_thres)
             {
-                obj_waypoints.emplace_back(close_wp);
-                pubOccupancyWp(m_waypoints[close_wp].position, 0);
+                dist_of_wp_obj = Ras::calcDistOfPoints(m_waypoints[close_wp].position, in_obj.object.pose.position);
+
+                if (dist_of_wp_obj > 1.0)
+                {
+                    obj_waypoints.emplace_back(close_wp);
+                    pubOccupancyWp(m_waypoints[close_wp].position, 0);
+                }
             }
-            //
+
+
+
             // RasVector obj_closewp_vec(in_obj.object.pose.position, m_waypoints[close_wp].position);
             // RasVector obj_vec(in_obj.object.pose);
             //
@@ -229,18 +242,36 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
 
         case derived_object_msgs::Object::CLASSIFICATION_CAR:
         {
-            float obj_vec_x, obj_vec_y, obj_wp_vec_x, obj_wp_vec_y, inner_prod, dist_of_wp_obj;
-            RasVector obj_vec(in_obj.object.twist);
-            // std::cout << obj_vec.x << ", " << obj_vec.y << ", " << obj_vec.len << std::endl;
+            float dist_of_wp_ego;
+            int pose_cross_wp;
+            RasVector obj_twist_vec(in_obj.object.twist);
+            RasVector obj_pose_vec(in_obj.object.pose);
+
+            // std::cout << obj_twist_vec.x << ", " << obj_twist_vec.y << ", " << obj_twist_vec.len << std::endl;
             for (auto itr = m_waypoints.begin(); itr != m_waypoints.end(); itr ++)
             {
                 RasVector obj_wp_vec(in_obj.object.pose.position, itr->position);
-                if (isSameDirection(obj_vec, obj_wp_vec, 0.9999))
+
+
+                if (isSameDirection(obj_twist_vec, obj_wp_vec, 0.9999))
                 {
+                    if (Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position) < in_obj.object.shape.dimensions[1]) break;
                     pubOccupancyWp(m_waypoints[std::distance(m_waypoints.begin(), itr)].position, 1);
                     obj_waypoints.emplace_back(std::distance(m_waypoints.begin(), itr));
                     // break;
                 }
+
+                if (in_obj.object.detection_level < m_detection_level_thres) continue;
+
+                // find crossing waypoint with object pose
+                if (isSameDirection(obj_wp_vec, obj_pose_vec, 0.9999))
+                {
+                    if (Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position) < in_obj.object.shape.dimensions[1]) break;
+                    pose_cross_wp = std::distance(m_waypoints.begin(), itr);
+                    obj_waypoints.emplace_back(pose_cross_wp);
+                    pubOccupancyWp(m_waypoints[pose_cross_wp].position, 2);
+                }
+
             }
             break;
         }
@@ -292,7 +323,7 @@ bool RasCore::isCollideObstacle(const ras::RasObject &in_obj, const int &wp)
     dist_of_wp_ego = (wp - m_ego_wp) * m_wp_interval;
     dist_of_wp_obj = Ras::calcDistOfPoints(in_obj.object.pose.position, m_waypoints[wp].position);
 
-    if (wp > m_ego_wp + m_max_vision / m_wp_interval || in_obj.is_touched || dist_of_wp_ego < 0 || in_obj.object.detection_level < m_detection_level_thres)
+    if (wp > m_ego_wp + m_max_vision / m_wp_interval || in_obj.is_touched || dist_of_wp_ego < 0)
         return false;
 
     switch (in_obj.object.classification)
@@ -320,9 +351,9 @@ bool RasCore::isCollideObstacle(const ras::RasObject &in_obj, const int &wp)
 }
 
 
-void RasCore::calcOccupancyWp(const std::vector<int> &in_wp_vec, const ras::RasObject &in_obj)
+void RasCore::addObjIdToOccupancyWp(const std::vector<int> &in_waypoint, const ras::RasObject &in_obj)
 {
-    for (const auto &e : in_wp_vec)
+    for (const auto &e : in_waypoint)
     {
         m_wp_obj_map[e].emplace_back(in_obj.object.id);
     }
@@ -339,7 +370,7 @@ int RasCore::findWallWp(std::vector<int> &critical_obj_id_vec)
 {
     for (const auto &e : m_wp_obj_map)
     {
-        if (e.first < m_brake_wp) continue;
+        if (e.first < m_brakable_wp) continue;
         // std::cout << e.first << std::endl;
         critical_obj_id_vec.clear();
 
@@ -399,6 +430,12 @@ void RasCore::manageMarkers()
         obj_array.objects.emplace_back(e.second);
     }
 
+    // reset is_touched flag if the object appears again from behind
+    for (const auto &e : m_wp_obj_map[m_ego_wp])
+    {
+        m_obj_map[e].is_touched = false;
+    }
+
     // publish
     obj_array.header.stamp = ros::Time::now();
     obj_array.header.frame_id = "map";
@@ -441,11 +478,13 @@ void RasCore::pubOccupancyWp(const geometry_msgs::Point &in_pose, const int &typ
     switch (type)
     {
         case 0:
-        pub_wp_obj.publish(point);
-        break;
+            pub_wp_obj.publish(point);
+            break;
         case 1:
-        pub_wp_cross.publish(point);
-        break;
+            pub_wp_cross_twist.publish(point);
+            break;
+        case 2:
+            pub_wp_cross_pose.publish(point);
     }
 }
 
