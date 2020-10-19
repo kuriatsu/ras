@@ -50,6 +50,14 @@ RasVector::RasVector(const geometry_msgs::Point &from, const geometry_msgs::Poin
     len = sqrt(pow(x, 2) + pow(y, 2));
 }
 
+RasVector::RasVector(const geometry_msgs::Twist &in_twist)
+{
+    x = twist.x;
+    y = twist.y;
+    z = twist.z;
+    len = sqrt(pow(x, 2) + pow(y, 2));
+}
+
 RasVector::RasVector(const geometry_msgs::Pose &in_pose)
 {
     x = cos(Ras::quatToYaw(in_pose.orientation));

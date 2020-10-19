@@ -158,7 +158,7 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
             // ROS_INFO("findWpOfObj pedestrian");
             float min_dist_of_wp_obj = m_max_vision, dist_of_wp_obj;
             int close_wp, perp_wp, cross_wp;
-            RasVector obj_vec(in_obj.object.pose);
+            RasVector obj_vec(in_obj.object.twist);
 
             // find closest waypoint from object
             for (auto itr = m_waypoints.begin(); itr < m_waypoints.end(); itr++)
@@ -230,7 +230,7 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
         case derived_object_msgs::Object::CLASSIFICATION_CAR:
         {
             float obj_vec_x, obj_vec_y, obj_wp_vec_x, obj_wp_vec_y, inner_prod, dist_of_wp_obj;
-            RasVector obj_vec(in_obj.object.pose);
+            RasVector obj_vec(in_obj.object.twist);
             // std::cout << obj_vec.x << ", " << obj_vec.y << ", " << obj_vec.len << std::endl;
             for (auto itr = m_waypoints.begin(); itr != m_waypoints.end(); itr ++)
             {
@@ -247,21 +247,21 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
 
         case derived_object_msgs::Object::CLASSIFICATION_UNKNOWN:
         {
-        //     float min_dist_of_wp_obj = m_max_vision, dist_of_wp_obj;
-        //     int close_wp;
-        //     // find closest waypoint from object
-        //     for (auto itr = m_waypoints.begin(); itr < m_waypoints.end(); itr++)
-        //     // for (auto itr = m_waypoints.begin(); itr != m_waypoints.end(); itr++)
-        //     {
-        //         dist_of_wp_obj = Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position);
-        //         if (dist_of_wp_obj < min_dist_of_wp_obj)
-        //         {
-        //             min_dist_of_wp_obj = dist_of_wp_obj;
-        //             close_wp = std::distance(m_waypoints.begin(), itr);
-        //         }
-        //     }
-        //     obj_waypoints.emplace_back(close_wp);
-        //     pubOccupancyWp(m_waypoints[close_wp].position, 0);
+            float min_dist_of_wp_obj = m_max_vision, dist_of_wp_obj;
+            int close_wp;
+            // find closest waypoint from object
+            for (auto itr = m_waypoints.begin(); itr < m_waypoints.end(); itr++)
+            // for (auto itr = m_waypoints.begin(); itr != m_waypoints.end(); itr++)
+            {
+                dist_of_wp_obj = Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position);
+                if (dist_of_wp_obj < min_dist_of_wp_obj)
+                {
+                    min_dist_of_wp_obj = dist_of_wp_obj;
+                    close_wp = std::distance(m_waypoints.begin(), itr);
+                }
+            }
+            obj_waypoints.emplace_back(close_wp);
+            pubOccupancyWp(m_waypoints[close_wp].position, 0);
         }
     }
     return obj_waypoints;

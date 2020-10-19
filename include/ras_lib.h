@@ -3,6 +3,7 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Twist.h>
 
 namespace Ras{
 geometry_msgs::Pose tfTransformer(const geometry_msgs::Pose &current_pose, const std::string &current_frame_id, const std::string &target_frame_id);
@@ -18,4 +19,5 @@ struct RasVector
     float len;
     RasVector(const geometry_msgs::Point &from, const geometry_msgs::Point &to);
     RasVector(const geometry_msgs::Pose &in_pose);
+    RasVector(const geometry_msgs::Twist &in_twist);
 };
