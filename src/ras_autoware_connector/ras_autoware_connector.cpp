@@ -8,7 +8,7 @@ RasAutowareConnector::RasAutowareConnector(): polygon_interval(0.5)//, keep_time
     sub_obj = n.subscribe("/managed_objects", 5, &RasAutowareConnector::subObjCallback, this);
     sub_wall = n.subscribe("/wall_object", 5, &RasAutowareConnector::subWallCallback, this);
     pub_obj = n.advertise<autoware_msgs::DetectedObjectArray>("/detection/contour_tracker/objects", 5);
-    // pub_polygon = n.advertise<geometry_msgs::PolygonStamped>("/ras_polygon", 10);
+    pub_polygon = n.advertise<geometry_msgs::PolygonStamped>("/ras_polygon", 10);
 }
 
 
@@ -72,7 +72,7 @@ autoware_msgs::DetectedObject RasAutowareConnector::rasToAutowareObject(const ra
     out_obj.acceleration.angular.z = in_obj.object.accel.angular.z;
     // out_obj.pointcloud = in_obj.object.pose;
     out_obj.convex_hull = calcPolygon(in_obj);
-    // pub_polygon.publish(out_obj.convex_hull);
+    pub_polygon.publish(out_obj.convex_hull);
     out_obj.pose.position.x = in_obj.object.pose.position.x;
     out_obj.pose.position.y = in_obj.object.pose.position.y;
     // out_obj.candidate_trajectories = in_obj.object.pose;

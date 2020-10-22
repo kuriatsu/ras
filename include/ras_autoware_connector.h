@@ -18,7 +18,7 @@ private:
     ros::Subscriber sub_obj;
     ros::Subscriber sub_wall;
     ros::Publisher pub_obj;
-    // ros::Publisher pub_polygon;
+    ros::Publisher pub_polygon;
     float polygon_interval;
     std::vector<autoware_msgs::DetectedObject> wall;
 public :

@@ -153,7 +153,7 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
             float min_dist_of_wp_obj = m_max_vision, dist_of_wp_obj;
             int close_wp = 0, twist_cross_wp = 0, pose_cross_wp = 0;
             RasVector obj_twist_vec(in_obj.object.twist);
-            RasVector obj_pose_vec(in_obj.object.pose);
+            // RasVector obj_pose_vec(in_obj.object.pose);
 
             for (auto itr = m_waypoints.begin(); itr < m_waypoints.end(); itr++)
             {
@@ -183,15 +183,15 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
                 }
 
                 // find crossing waypoint with object pose
-                if (isSameDirection(obj_wp_vec, obj_pose_vec, 0.9999))
-                {
-                    pose_cross_wp = std::distance(m_waypoints.begin(), itr);
-                    obj_waypoints.emplace_back(pose_cross_wp);
-                    pubOccupancyWp(m_waypoints[pose_cross_wp].position, 2);
-                }
+                // if (isSameDirection(obj_wp_vec, obj_pose_vec, 0.9999))
+                // {
+                //     pose_cross_wp = std::distance(m_waypoints.begin(), itr);
+                //     obj_waypoints.emplace_back(pose_cross_wp);
+                //     pubOccupancyWp(m_waypoints[pose_cross_wp].position, 2);
+                // }
             }
 
-            if (close_wp != 0 && in_obj.object.detection_level < m_detection_level_thres)
+            if (close_wp != 0 && in_obj.object.detection_level >= m_detection_level_thres)
             {
                 dist_of_wp_obj = Ras::calcDistOfPoints(m_waypoints[close_wp].position, in_obj.object.pose.position);
 
@@ -255,7 +255,7 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
 
                 if (isSameDirection(obj_twist_vec, obj_wp_vec, 0.9999))
                 {
-                    if (Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position) < in_obj.object.shape.dimensions[1]) break;
+                    if (Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position) < in_obj.object.shape.dimensions[1] * 0.5) break;
                     pubOccupancyWp(m_waypoints[std::distance(m_waypoints.begin(), itr)].position, 1);
                     obj_waypoints.emplace_back(std::distance(m_waypoints.begin(), itr));
                     // break;
@@ -450,7 +450,7 @@ void RasCore::manageMarkers()
         wall.object.id = obj_array.objects.back().object.id + 1;
         wall.object.pose = m_waypoints[wall_wp];
         wall.object.shape.type = shape_msgs::SolidPrimitive::BOX;
-        wall.object.shape.dimensions.emplace_back(0.1);
+        wall.object.shape.dimensions.emplace_back(1.0);
         wall.object.shape.dimensions.emplace_back(5.0);
         wall.object.shape.dimensions.emplace_back(4.0);
         wall.object.classification = derived_object_msgs::Object::CLASSIFICATION_BARRIER;
