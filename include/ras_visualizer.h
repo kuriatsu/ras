@@ -35,6 +35,7 @@ private:
     std::vector<jsk_rviz_plugins::Pictogram> wall_pictogram;
     std::vector<visualization_msgs::Marker> wall_marker;
     std::string m_ego_name = "ego_vehicle";
+    ros::Time last_wall_time;
 
 public:
     RasVisualizer();

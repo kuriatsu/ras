@@ -15,6 +15,8 @@ RasVisualizer::RasVisualizer(): marker_scale(1.0)
 	pub_wall = n.advertise<visualization_msgs::Marker>("/wall_marker", 1);
     pub_pictgram = n.advertise<jsk_rviz_plugins::PictogramArray>("/pictogram", 5);
     pub_camera_angle = n.advertise<std_msgs::Float32>("/carla_camera_angle", 1);
+
+    last_wall_time = ros::Time(0);
 }
 
 
@@ -48,8 +50,15 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
     {
         pictogram_array.pictograms.emplace_back(wall_pictogram[0]);
         pub_wall.publish(wall_marker[0]);
+
+        if (ros::Time::now() - last_wall_time > ros::Duration(5.0))
+        {
+            system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
+        }
+
         wall_pictogram.pop_back();
         wall_marker.pop_back();
+        last_wall_time = ros::Time::now();
     }
 
     box_array.header = in_obj_array.header;

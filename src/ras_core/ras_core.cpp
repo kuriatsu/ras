@@ -143,7 +143,9 @@ check distance, the same direction or perpendicular from object
 */
 std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
 {
+
     std::vector<int> obj_waypoints;
+    if (in_obj.object.detection_level == 0) return obj_waypoints;
 
     switch(in_obj.object.classification)
     {
@@ -157,8 +159,6 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
 
             for (auto itr = m_waypoints.begin(); itr < m_waypoints.end(); itr++)
             {
-
-
                 // find crossing waypoint with object twist
                 RasVector obj_wp_vec(in_obj.object.pose.position, itr->position);
 
@@ -171,7 +171,6 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
                 }
 
                 dist_of_wp_obj = Ras::calcDistOfPoints(itr->position, in_obj.object.pose.position);
-
 
                 if (in_obj.object.detection_level < m_detection_level_thres) continue;
 
