@@ -10,6 +10,7 @@ RasVisualizer::RasVisualizer(): marker_scale(1.0)
 
     sub_obj = n.subscribe("/managed_objects", 5, &RasVisualizer::subObjCallback, this);
     sub_wall = n.subscribe("/wall_object", 5, &RasVisualizer::subWallCallback, this);
+    sub_intervene_type = n.subscribe("/intervene_type", 1, &RasVisualizer::subInterveneTypeCallback, this);
     pub_fb_obj = n.advertise<ras::RasObject>("/feedback_object", 5);
     pub_box = n.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_box", 5);
 	pub_wall = n.advertise<visualization_msgs::Marker>("/wall_marker", 1);
@@ -29,8 +30,13 @@ RasVisualizer::~RasVisualizer()
 void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
 {
     server->clear();
+    wall_obj_list.clear();
+
     jsk_recognition_msgs::BoundingBoxArray box_array;
     jsk_rviz_plugins::PictogramArray pictogram_array;
+    std_msgs::Float32 yaw_to_critical_obj;
+    geometry_msgs::Pose critical_obj_pose;
+
     for (auto e : in_obj_array.objects)
     {
         if (e.is_interaction)
@@ -41,6 +47,10 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 0));
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 1));
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 2));
+                critical_obj_pose = Ras::tfTransformer(e.object.pose, e.object.header.frame_id, m_ego_name);
+                yaw_to_critical_obj.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
+                // pub_camera_angle.publish(yaw_to_critical_obj);
+                wall_obj_list.emplace_back(e.object.id);
             }
         }
         box_array.boxes.emplace_back(createBox(e));
@@ -51,14 +61,23 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
         pictogram_array.pictograms.emplace_back(wall_pictogram[0]);
         pub_wall.publish(wall_marker[0]);
 
-        if (ros::Time::now() - last_wall_time > ros::Duration(5.0))
+        // if (ros::Time::now() - last_wall_time > ros::Duration(5.0))
+        // {
+        //     system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
+        // }
+        if (intervene_type == 0)
         {
             system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
         }
 
         wall_pictogram.pop_back();
         wall_marker.pop_back();
-        last_wall_time = ros::Time::now();
+        // last_wall_time = ros::Time::now();
+    }
+    else
+    {
+        yaw_to_critical_obj.data = 0.0;
+        // pub_camera_angle.publish(yaw_to_critical_obj);
     }
 
     box_array.header = in_obj_array.header;
@@ -80,8 +99,6 @@ void RasVisualizer::subWallCallback(const ras::RasObject &in_obj)
 jsk_recognition_msgs::BoundingBox RasVisualizer::createBox(const ras::RasObject &in_obj)
 {
     jsk_recognition_msgs::BoundingBox marker;
-    geometry_msgs::Pose critical_obj_pose;
-    std_msgs::Float32 yaw_to_critical_obj;
 
     marker.header = in_obj.object.header;
     marker.label = in_obj.object.id;
@@ -99,14 +116,10 @@ jsk_recognition_msgs::BoundingBox RasVisualizer::createBox(const ras::RasObject 
     if (in_obj.is_important)
     {
         marker.value = 100.0;
-        critical_obj_pose = Ras::tfTransformer(in_obj.object.pose, in_obj.object.header.frame_id, m_ego_name);
-        yaw_to_critical_obj.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
-        pub_camera_angle.publish(yaw_to_critical_obj);
     }
     else
     {
         marker.value = 50.0;
-
     }
     return marker;
 }
@@ -319,4 +332,21 @@ void RasVisualizer::intMarkerCallback(const visualization_msgs::InteractiveMarke
 
     std::istringstream(feedback->marker_name) >> feedback_obj.object.id;
     pub_fb_obj.publish(feedback_obj);
+}
+
+void RasVisualizer::subKeyInputCallback(const std_msgs::String &in_key)
+{
+    ras::RasObject feedback_obj;
+    if (intervene_type != 1) return;
+    if (in_key.data != "Return") return;
+    for (const auto &e: wall_obj_list)
+    {
+        feedback_obj.object.id = e;
+        pub_fb_obj.publish(feedback_obj);
+    }
+}
+
+void RasVisualizer::subInterveneTypeCallback(const std_msgs::Int8 &in_intervene_type)
+{
+    intervene_type = in_intervene_type.data;
 }

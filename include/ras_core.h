@@ -8,6 +8,7 @@
 #include <derived_object_msgs/Object.h>
 #include <nav_msgs/Odometry.h>
 #include <shape_msgs/SolidPrimitive.h>
+#include <std_msgs/Int8.h>
 
 #include "ras_lib.h"
 #include "ras/RasObject.h"
@@ -35,11 +36,13 @@ private:
     ros::Publisher pub_wp_cross_twist;
     ros::Publisher pub_wp_cross_pose;
     ros::Publisher pub_wp_obj;
+    ros::Publisher pub_intervene_type;
 
     int m_keep_time;
     float m_max_vision;
     float m_min_vision;
-	std::string m_ego_name;
+    std::string m_ego_name;
+	int m_intervene_type;
     bool m_conservative_recognition;
     float m_detection_level_thres;
 

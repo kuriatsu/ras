@@ -19,6 +19,7 @@ RasCore::RasCore(): m_ego_wp(0)
     pub_wp_obj = n.advertise<geometry_msgs::PointStamped>("/obj_wp", 5);
     pub_wp_cross_twist = n.advertise<geometry_msgs::PointStamped>("/cross_twist_wp", 5);
     pub_wp_cross_pose = n.advertise<geometry_msgs::PointStamped>("/cross_pose_wp", 5);
+    pub_intervene_type = n.advertise<std_msgs::Int8>("/intervene_type", 1);
 
     // pub_erase = n.advertise<std_msgs::Int32>("/erase_signal", 1);
 
@@ -30,11 +31,16 @@ RasCore::RasCore(): m_ego_wp(0)
 void RasCore::callbackDynamicReconfigure(ras::rasConfig &config, uint32_t lebel)
 {
     m_conservative_recognition = config.conservative?true:false;
+    m_intervene_type = config.intervene_type;
     m_max_vision = config.max_vision_range;
     m_min_vision = config.min_vision_range;
     m_keep_time = config.keep_time;
     m_ego_name = config.ego_name;
     m_detection_level_thres = config.detection_level_thres;
+
+    std_msgs::Int8 intervene_type;
+    intervene_type.data = m_intervene_type;
+    pub_intervene_type.publish(intervene_type);
 }
 
 // get ego_vehicle id to remove ego_object from obstacles
@@ -399,7 +405,7 @@ void RasCore::manageMarkers()
     std::vector<int> erase_key_vec, critical_obj_id_vec;
     ras::RasObjectArray obj_array;
     ras::RasObject wall;
-    int wall_wp;
+    int wall_wp = 0;
 
     wall_wp = findWallWp(critical_obj_id_vec);
     // std::cout << "critical object : " << critical_obj_id_vec.size() << std::endl;

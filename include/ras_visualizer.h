@@ -10,6 +10,8 @@
 #include <jsk_rviz_plugins/PictogramArray.h>
 #include <cmath>
 #include <std_msgs/Float32.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Int8.h>
 
 #include "ras/RasObject.h"
 #include "ras/RasObjectArray.h"
@@ -24,6 +26,8 @@ private:
 
     ros::Subscriber sub_obj;
     ros::Subscriber sub_wall;
+    ros::Subscriber sub_key_input;
+    ros::Subscriber sub_intervene_type;
     ros::Publisher pub_fb_obj;
     ros::Publisher pub_box;
     ros::Publisher pub_wall;
@@ -34,8 +38,10 @@ private:
     float marker_scale;
     std::vector<jsk_rviz_plugins::Pictogram> wall_pictogram;
     std::vector<visualization_msgs::Marker> wall_marker;
+    std::vector<int> wall_obj_list;
     std::string m_ego_name = "ego_vehicle";
     ros::Time last_wall_time;
+    int intervene_type; // 0:control 1:enter 2:touch
 
 public:
     RasVisualizer();
@@ -52,4 +58,6 @@ private:
     void setMarkerControl(visualization_msgs::InteractiveMarker &int_marker, const ras::RasObject &in_obj);
     void setMarkerToMarkerControl(visualization_msgs::InteractiveMarkerControl &control, const ras::RasObject &in_obj);
     jsk_rviz_plugins::Pictogram createPictogram(const ras::RasObject &in_obj, const int &type);
+    void subKeyInputCallback(const std_msgs::String &in_key);
+    void subInterveneTypeCallback(const std_msgs::Int8 &intervene_type);
 };
