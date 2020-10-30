@@ -11,7 +11,7 @@
 #include <cmath>
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
-#include <std_msgs/Int8.h>
+#include <std_msgs/Int32.h>
 
 #include "ras/RasObject.h"
 #include "ras/RasObjectArray.h"
@@ -59,5 +59,5 @@ private:
     void setMarkerToMarkerControl(visualization_msgs::InteractiveMarkerControl &control, const ras::RasObject &in_obj);
     jsk_rviz_plugins::Pictogram createPictogram(const ras::RasObject &in_obj, const int &type);
     void subKeyInputCallback(const std_msgs::String &in_key);
-    void subInterveneTypeCallback(const std_msgs::Int8 &intervene_type);
+    void subInterveneTypeCallback(const std_msgs::Int32 &intervene_type);
 };

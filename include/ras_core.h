@@ -8,7 +8,7 @@
 #include <derived_object_msgs/Object.h>
 #include <nav_msgs/Odometry.h>
 #include <shape_msgs/SolidPrimitive.h>
-#include <std_msgs/Int8.h>
+#include <std_msgs/Int32.h>
 
 #include "ras_lib.h"
 #include "ras/RasObject.h"

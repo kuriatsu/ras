@@ -11,6 +11,7 @@ RasVisualizer::RasVisualizer(): marker_scale(1.0)
     sub_obj = n.subscribe("/managed_objects", 5, &RasVisualizer::subObjCallback, this);
     sub_wall = n.subscribe("/wall_object", 5, &RasVisualizer::subWallCallback, this);
     sub_intervene_type = n.subscribe("/intervene_type", 1, &RasVisualizer::subInterveneTypeCallback, this);
+    sub_key_input = n.subscribe("/rviz_keyboard_input", 1, &RasVisualizer::subKeyInputCallback, this);
     pub_fb_obj = n.advertise<ras::RasObject>("/feedback_object", 5);
     pub_box = n.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_box", 5);
 	pub_wall = n.advertise<visualization_msgs::Marker>("/wall_marker", 1);
@@ -30,7 +31,8 @@ RasVisualizer::~RasVisualizer()
 void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
 {
     server->clear();
-    wall_obj_list.clear();
+    std::vector<int> new_wall_obj_list;
+    // wall_obj_list.clear();
 
     jsk_recognition_msgs::BoundingBoxArray box_array;
     jsk_rviz_plugins::PictogramArray pictogram_array;
@@ -49,12 +51,19 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 2));
                 critical_obj_pose = Ras::tfTransformer(e.object.pose, e.object.header.frame_id, m_ego_name);
                 yaw_to_critical_obj.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
+                if (intervene_type == 0 && !std::count(wall_obj_list.begin(), wall_obj_list.end(), e.object.id))
+                {
+                    system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
+
+                }
                 // pub_camera_angle.publish(yaw_to_critical_obj);
-                wall_obj_list.emplace_back(e.object.id);
+                new_wall_obj_list.emplace_back(e.object.id);
             }
         }
         box_array.boxes.emplace_back(createBox(e));
     }
+
+    wall_obj_list = new_wall_obj_list;
 
     if (!wall_pictogram.empty() && !wall_marker.empty())
     {
@@ -65,10 +74,6 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
         // {
         //     system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
         // }
-        if (intervene_type == 0)
-        {
-            system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
-        }
 
         wall_pictogram.pop_back();
         wall_marker.pop_back();
@@ -338,6 +343,7 @@ void RasVisualizer::subKeyInputCallback(const std_msgs::String &in_key)
 {
     ras::RasObject feedback_obj;
     if (intervene_type != 1) return;
+    std::cout << in_key.data << (in_key.data != "Return") << std::endl;
     if (in_key.data != "Return") return;
     for (const auto &e: wall_obj_list)
     {
@@ -346,7 +352,7 @@ void RasVisualizer::subKeyInputCallback(const std_msgs::String &in_key)
     }
 }
 
-void RasVisualizer::subInterveneTypeCallback(const std_msgs::Int8 &in_intervene_type)
+void RasVisualizer::subInterveneTypeCallback(const std_msgs::Int32 &in_intervene_type)
 {
     intervene_type = in_intervene_type.data;
 }

@@ -5,24 +5,22 @@ RasCore::RasCore(): m_ego_wp(0)
 {
     ros::NodeHandle n;
 
-    server_callback = boost::bind(&RasCore::callbackDynamicReconfigure, this, _1, _2);
-    server.setCallback(server_callback);
-
     sub_trajectory = n.subscribe("/lane_waypoints_array", 5, &RasCore::subTrajectoryCallback, this);
     // sub_carla_actor_list = n.subscribe("/carla/actor_list", 1, &RasCore::subActorCallback, this);
     sub_odom = n.subscribe("/carla/ego_vehicle/odometry", 5, &RasCore::subOdomCallback, this);
     sub_carla_obj = n.subscribe("/my_carla_actors", 1, &RasCore::subObjCallback, this);
-    sub_shift = n.subscribe("/feedback_object", 10, &RasCore::subShiftCallback, this);
+    sub_shift = n.subscribe("/feedback_object", 1, &RasCore::subShiftCallback, this);
 
-    pub_obj = n.advertise<ras::RasObjectArray>("/managed_objects", 5);
-    pub_wall = n.advertise<ras::RasObject>("/wall_object", 1);
-    pub_wp_obj = n.advertise<geometry_msgs::PointStamped>("/obj_wp", 5);
-    pub_wp_cross_twist = n.advertise<geometry_msgs::PointStamped>("/cross_twist_wp", 5);
-    pub_wp_cross_pose = n.advertise<geometry_msgs::PointStamped>("/cross_pose_wp", 5);
-    pub_intervene_type = n.advertise<std_msgs::Int8>("/intervene_type", 1);
+    pub_obj = n.advertise<ras::RasObjectArray>("/managed_objects", 1);
+    pub_wall = n.advertise<ras::RasObject>("/wall_object", 5);
+    pub_wp_obj = n.advertise<geometry_msgs::PointStamped>("/obj_wp", 100);
+    pub_wp_cross_twist = n.advertise<geometry_msgs::PointStamped>("/cross_twist_wp", 100);
+    pub_wp_cross_pose = n.advertise<geometry_msgs::PointStamped>("/cross_pose_wp", 100);
+    pub_intervene_type = n.advertise<std_msgs::Int32>("/intervene_type", 1, true);
 
+    server_callback = boost::bind(&RasCore::callbackDynamicReconfigure, this, _1, _2);
+    server.setCallback(server_callback);
     // pub_erase = n.advertise<std_msgs::Int32>("/erase_signal", 1);
-
 
     m_obj_map.clear();
 }
@@ -31,14 +29,14 @@ RasCore::RasCore(): m_ego_wp(0)
 void RasCore::callbackDynamicReconfigure(ras::rasConfig &config, uint32_t lebel)
 {
     m_conservative_recognition = config.conservative?true:false;
-    m_intervene_type = config.intervene_type;
+    m_intervene_type = int(config.intervene_type);
     m_max_vision = config.max_vision_range;
     m_min_vision = config.min_vision_range;
     m_keep_time = config.keep_time;
     m_ego_name = config.ego_name;
     m_detection_level_thres = config.detection_level_thres;
 
-    std_msgs::Int8 intervene_type;
+    std_msgs::Int32 intervene_type;
     intervene_type.data = m_intervene_type;
     pub_intervene_type.publish(intervene_type);
 }
