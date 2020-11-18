@@ -334,16 +334,35 @@ bool RasCore::isCollideObstacle(const ras::RasObject &in_obj, const int &wp)
         case derived_object_msgs::Object::CLASSIFICATION_PEDESTRIAN:
         {
             std::cout << wp << "; " << dist_of_wp_obj << " " << dist_of_wp_ego << " " << dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) << " " << dist_of_wp_ego / m_ego_twist.linear.x << std::endl;
-            return (dist_of_wp_obj < dist_of_wp_ego || (dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2))) < (dist_of_wp_ego / m_ego_twist.linear.x));
+
+            if (dist_of_wp_obj < dist_of_wp_ego)
+            {
+                return true;
+            }
+
+            if (m_ego_twist.linear.x != 0.0)
+            {
+                return false;
+            }
+
+            return (dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) < (dist_of_wp_ego / m_ego_twist.linear.x));
             break;
         }
+
         case derived_object_msgs::Object::CLASSIFICATION_CAR:
         {
             // return true;
             std::cout << wp << "; " << dist_of_wp_obj << " " << dist_of_wp_ego << " " << dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) << " " << dist_of_wp_ego / m_ego_twist.linear.x << std::endl;
+
+            if (m_ego_twist.linear.x != 0.0)
+            {
+                return false;
+            }
+
             return (dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2))) < (dist_of_wp_ego / m_ego_twist.linear.x);
             break;
         }
+
         case derived_object_msgs::Object::CLASSIFICATION_UNKNOWN:
         {
             // return true;
