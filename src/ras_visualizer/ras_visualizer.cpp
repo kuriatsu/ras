@@ -3,20 +3,20 @@
 
 boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 
-RasVisualizer::RasVisualizer(): marker_scale(1.0)
+RasVisualizer::RasVisualizer(): marker_scale(2.0)
 {
 	ros::NodeHandle n;
     server.reset(new interactive_markers::InteractiveMarkerServer("ras_visualizer_node"));
 
-    sub_obj = n.subscribe("/managed_objects", 5, &RasVisualizer::subObjCallback, this);
-    sub_wall = n.subscribe("/wall_object", 5, &RasVisualizer::subWallCallback, this);
-    sub_intervene_type = n.subscribe("/intervene_type", 1, &RasVisualizer::subInterveneTypeCallback, this);
-    sub_key_input = n.subscribe("/rviz_keyboard_input", 1, &RasVisualizer::subKeyInputCallback, this);
-    pub_fb_obj = n.advertise<ras::RasObject>("/feedback_object", 5);
-    pub_box = n.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_box", 5);
-	pub_wall = n.advertise<visualization_msgs::Marker>("/wall_marker", 1);
-    pub_pictgram = n.advertise<jsk_rviz_plugins::PictogramArray>("/pictogram", 5);
-    pub_camera_angle = n.advertise<std_msgs::Float32>("/carla_camera_angle", 1);
+    sub_obj = n.subscribe("managed_objects", 5, &RasVisualizer::subObjCallback, this);
+    sub_wall = n.subscribe("wall_object", 5, &RasVisualizer::subWallCallback, this);
+    sub_intervene_type = n.subscribe("intervene_type", 1, &RasVisualizer::subInterveneTypeCallback, this);
+    sub_key_input = n.subscribe("rviz_keyboard_input", 1, &RasVisualizer::subKeyInputCallback, this);
+    pub_fb_obj = n.advertise<ras::RasObject>("feedback_object", 5);
+    pub_box = n.advertise<jsk_recognition_msgs::BoundingBoxArray>("object_box", 5);
+	pub_wall = n.advertise<visualization_msgs::Marker>("wall_marker", 1);
+    pub_pictgram = n.advertise<jsk_rviz_plugins::PictogramArray>("pictogram", 5);
+    pub_camera_angle = n.advertise<std_msgs::Float32>("carla_camera_angle", 1);
 
     last_wall_time = ros::Time(0);
 }
@@ -213,7 +213,7 @@ void RasVisualizer::setMarkerToMarkerControl(visualization_msgs::InteractiveMark
 		marker.color.g = 1;
 	}
     marker.color.b = 0;
-    marker.color.a = 0.2;
+    marker.color.a = 0.0;
 
     // marker.lifetime = ros::Duration(2.0);
     control.markers.push_back(marker);
