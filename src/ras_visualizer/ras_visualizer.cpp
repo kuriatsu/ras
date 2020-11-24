@@ -11,7 +11,8 @@ RasVisualizer::RasVisualizer(): marker_scale(2.0)
     sub_obj = n.subscribe("managed_objects", 5, &RasVisualizer::subObjCallback, this);
     sub_wall = n.subscribe("wall_object", 5, &RasVisualizer::subWallCallback, this);
     sub_intervene_type = n.subscribe("intervene_type", 1, &RasVisualizer::subInterveneTypeCallback, this);
-    sub_key_input = n.subscribe("rviz_keyboard_input", 1, &RasVisualizer::subKeyInputCallback, this);
+    sub_key_input = n.subscribe("rviz_keyboard_input", 1, &RasVisualizer::subButtonInputCallback, this);
+    sub_joy_input = n.subscribe("joy", 1, &RasVisualizer::subJoyInputCallback, this);
     pub_fb_obj = n.advertise<ras::RasObject>("feedback_object", 5);
     pub_box = n.advertise<jsk_recognition_msgs::BoundingBoxArray>("object_box", 5);
 	pub_wall = n.advertise<visualization_msgs::Marker>("wall_marker", 1);
@@ -36,8 +37,9 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
 
     jsk_recognition_msgs::BoundingBoxArray box_array;
     jsk_rviz_plugins::PictogramArray pictogram_array;
-    std_msgs::Float32 yaw_to_critical_obj;
+    std_msgs::Float32 critical_obj_direction_from_ego;
     geometry_msgs::Pose critical_obj_pose;
+    bool intervene_beep = false;
 
     for (auto e : in_obj_array.objects)
     {
@@ -50,13 +52,18 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 1));
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 2));
                 critical_obj_pose = Ras::tfTransformer(e.object.pose, e.object.header.frame_id, m_ego_name);
-                yaw_to_critical_obj.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
-                if (intervene_type == 0 && !std::count(wall_obj_list.begin(), wall_obj_list.end(), e.object.id))
+                critical_obj_direction_from_ego.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
+                // if (intervene_type == 0 && !std::count(wall_obj_list.begin(), wall_obj_list.end(), e.object.id))
+                // {
+                //     system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
+                //
+                // }
+                if (!std::count(wall_obj_list.begin(), wall_obj_list.end(), e.object.id))
                 {
-                    system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
-
+                    intervene_beep = true;
                 }
-                // pub_camera_angle.publish(yaw_to_critical_obj);
+
+                // pub_camera_angle.publish(critical_obj_direction_from_ego);
                 new_wall_obj_list.emplace_back(e.object.id);
             }
         }
@@ -64,25 +71,22 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
     }
 
     wall_obj_list = new_wall_obj_list;
+    if (intervene_beep)
+    {
+        sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");
+    }
 
     if (!wall_pictogram.empty() && !wall_marker.empty())
     {
         pictogram_array.pictograms.emplace_back(wall_pictogram[0]);
         pub_wall.publish(wall_marker[0]);
-
-        // if (ros::Time::now() - last_wall_time > ros::Duration(5.0))
-        // {
-        //     system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
-        // }
-
         wall_pictogram.pop_back();
         wall_marker.pop_back();
-        // last_wall_time = ros::Time::now();
     }
     else
     {
-        yaw_to_critical_obj.data = 0.0;
-        // pub_camera_angle.publish(yaw_to_critical_obj);
+        critical_obj_direction_from_ego.data = 0.0;
+        // pub_camera_angle.publish(critical_obj_direction_from_ego);
     }
 
     box_array.header = in_obj_array.header;
@@ -339,7 +343,7 @@ void RasVisualizer::intMarkerCallback(const visualization_msgs::InteractiveMarke
     pub_fb_obj.publish(feedback_obj);
 }
 
-void RasVisualizer::subKeyInputCallback(const std_msgs::String &in_key)
+void RasVisualizer::subButtonInputCallback(const std_msgs::String &in_key)
 {
     ras::RasObject feedback_obj;
     if (intervene_type != 1) return;
@@ -350,6 +354,24 @@ void RasVisualizer::subKeyInputCallback(const std_msgs::String &in_key)
         feedback_obj.object.id = e;
         pub_fb_obj.publish(feedback_obj);
     }
+}
+
+
+void RasVisualizer::subJoyInputCallback(const sensor_msgs::Joy &in_joy)
+{
+    static int last_joy_input = 0;
+    ras::RasObject feedback_obj;
+
+    if (in_joy.buttons[23] == 1 && last_joy_input == 0)
+    {
+        for (const auto &e: wall_obj_list)
+        {
+            feedback_obj.object.id = e;
+            pub_fb_obj.publish(feedback_obj);
+        }
+    }
+    std::cout << last_joy_input << std::endl;
+    last_joy_input = in_joy.buttons[23];
 }
 
 void RasVisualizer::subInterveneTypeCallback(const std_msgs::Int32 &in_intervene_type)

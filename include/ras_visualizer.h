@@ -12,6 +12,8 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Int32.h>
+#include <sound_play/sound_play.h>
+#include <sensor_msgs/Joy.h>
 
 #include "ras/RasObject.h"
 #include "ras/RasObjectArray.h"
@@ -27,6 +29,7 @@ private:
     ros::Subscriber sub_obj;
     ros::Subscriber sub_wall;
     ros::Subscriber sub_key_input;
+    ros::Subscriber sub_joy_input;
     ros::Subscriber sub_intervene_type;
     ros::Publisher pub_fb_obj;
     ros::Publisher pub_box;
@@ -42,6 +45,7 @@ private:
     std::string m_ego_name = "ego_vehicle";
     ros::Time last_wall_time;
     int intervene_type; // 0:control 1:enter 2:touch
+    sound_play::SoundClient sound_client;
 
 public:
     RasVisualizer();
@@ -58,6 +62,7 @@ private:
     void setMarkerControl(visualization_msgs::InteractiveMarker &int_marker, const ras::RasObject &in_obj);
     void setMarkerToMarkerControl(visualization_msgs::InteractiveMarkerControl &control, const ras::RasObject &in_obj);
     jsk_rviz_plugins::Pictogram createPictogram(const ras::RasObject &in_obj, const int &type);
-    void subKeyInputCallback(const std_msgs::String &in_key);
+    void subButtonInputCallback(const std_msgs::String &in_key);
+    void subJoyInputCallback(const sensor_msgs::Joy &in_joy);
     void subInterveneTypeCallback(const std_msgs::Int32 &intervene_type);
 };
