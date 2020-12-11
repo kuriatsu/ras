@@ -86,6 +86,7 @@ void RasCore::subOdomCallback(const nav_msgs::Odometry &in_odom)
 void RasCore::subTrajectoryCallback(const autoware_msgs::LaneArray &in_array)
 {
     // ROS_INFO("subTrajectoryCallback");
+    m_waypoints.clear();
     if (in_array.lanes[0].waypoints.empty())
     {
         ROS_ERROR("waypoint_publisher: waypoints empty");
@@ -335,17 +336,22 @@ bool RasCore::isCollideObstacle(const ras::RasObject &in_obj, const int &wp)
         {
             std::cout << wp << "; " << dist_of_wp_obj << " " << dist_of_wp_ego << " " << dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) << " " << dist_of_wp_ego / m_ego_twist.linear.x << std::endl;
 
-            if (dist_of_wp_obj < dist_of_wp_ego)
-            {
-                return true;
-            }
+            // the pedestrian is closer than ego vehicle
+            // if (dist_of_wp_obj < dist_of_wp_ego)
+            // {
+            //     return true;
+            // }
 
-            if (m_ego_twist.linear.x != 0.0)
-            {
-                return false;
-            }
+            // if the obstacle is in front of pedestrian, they will collide
+            return true;
 
-            return (dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) < (dist_of_wp_ego / m_ego_twist.linear.x));
+            // if the vehicle  velocity is 0.0, will not collide, avoid below calcuration devided by 0
+            // if (m_ego_twist.linear.x != 0.0)
+            // {
+            //     return false;
+            // }
+            // if the car can reach the wp faster than pedestrian
+            // return (dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) < (dist_of_wp_ego / m_ego_twist.linear.x));
             break;
         }
 
@@ -354,9 +360,10 @@ bool RasCore::isCollideObstacle(const ras::RasObject &in_obj, const int &wp)
             // return true;
             std::cout << wp << "; " << dist_of_wp_obj << " " << dist_of_wp_ego << " " << dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) << " " << dist_of_wp_ego / m_ego_twist.linear.x << std::endl;
 
-            if (m_ego_twist.linear.x != 0.0)
+            if (m_ego_twist.linear.x == 0.0)
             {
-                return false;
+                return true;
+                // return false;
             }
 
             return (dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2))) < (dist_of_wp_ego / m_ego_twist.linear.x);

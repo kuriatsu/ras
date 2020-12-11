@@ -32,7 +32,7 @@ RasVisualizer::~RasVisualizer()
 void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
 {
     server->clear();
-    std::vector<int> new_wall_obj_list;
+    // std::vector<int> new_wall_obj_list;
     // wall_obj_list.clear();
 
     jsk_recognition_msgs::BoundingBoxArray box_array;
@@ -64,13 +64,14 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
                 }
 
                 // pub_camera_angle.publish(critical_obj_direction_from_ego);
-                new_wall_obj_list.emplace_back(e.object.id);
+                wall_obj_list.emplace_back(e.object.id);
+                // new_wall_obj_list.emplace_back(e.object.id);
             }
         }
         box_array.boxes.emplace_back(createBox(e));
     }
 
-    wall_obj_list = new_wall_obj_list;
+    // wall_obj_list = new_wall_obj_list;
     if (intervene_beep)
     {
         sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");
