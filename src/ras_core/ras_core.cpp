@@ -399,7 +399,8 @@ int RasCore::findWallWp(std::vector<int> &critical_obj_id_vec)
 {
     for (const auto &e : m_wp_obj_map)
     {
-        if (e.first < m_brakable_wp) continue;
+        // remove wall if the object is inside the stoppable distance
+        // if (e.first < m_brakable_wp) continue;
         // std::cout << e.first << std::endl;
         critical_obj_id_vec.clear();
 
