@@ -46,6 +46,10 @@ private:
     ros::Time last_wall_time;
     int intervene_type; // 0:control 1:enter 2:touch
     sound_play::SoundClient sound_client;
+    float vehicle_decceleration // m/s^2
+    geometry_msgs::Twist m_ego_twist;
+    float beep_timing;
+
 
 public:
     RasVisualizer();
@@ -54,6 +58,7 @@ public:
 
 private:
     void subObjCallback(const ras::RasObjectArray &in_obj_array);
+    void subOdomCallback(const nav_msgs::Odometry &in_odom);
     void subWallCallback(const ras::RasObject &in_obj);
     void intMarkerCallback(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
     jsk_recognition_msgs::BoundingBox createBox(const ras::RasObject &in_obj);

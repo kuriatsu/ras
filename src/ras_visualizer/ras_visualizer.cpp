@@ -3,7 +3,7 @@
 
 boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 
-RasVisualizer::RasVisualizer(): marker_scale(2.0)
+RasVisualizer::RasVisualizer(): marker_scale(2.0), vehicle_decceleration(1.96), beep_timing(2.0)
 {
 	ros::NodeHandle n;
     server.reset(new interactive_markers::InteractiveMarkerServer("ras_visualizer_node"));
@@ -48,20 +48,20 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
             createInteractiveMarker(e);
             if (e.is_important)
             {
+                // show pictgram for target object
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 0));
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 1));
                 pictogram_array.pictograms.emplace_back(createPictogram(e, 2));
+
+                // for camera rotation
                 critical_obj_pose = Ras::tfTransformer(e.object.pose, e.object.header.frame_id, m_ego_name);
                 critical_obj_direction_from_ego.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
-                // if (intervene_type == 0 && !std::count(wall_obj_list.begin(), wall_obj_list.end(), e.object.id))
+
+                // avoid beep multiple times (each id should appar only one time in one drivng)
+                // if (!std::count(wall_obj_list.begin(), wall_obj_list.end(), e.object.id))
                 // {
-                //     system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
-                //
+                //     intervene_beep = true;
                 // }
-                if (!std::count(wall_obj_list.begin(), wall_obj_list.end(), e.object.id))
-                {
-                    intervene_beep = true;
-                }
 
                 // pub_camera_angle.publish(critical_obj_direction_from_ego);
                 wall_obj_list.emplace_back(e.object.id);
@@ -71,11 +71,11 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
         box_array.boxes.emplace_back(createBox(e));
     }
 
-    // wall_obj_list = new_wall_obj_list;
-    if (intervene_beep)
-    {
-        sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");
-    }
+    // if (intervene_beep)
+    // {
+    //     // system("/home/kuriatsu/Source/catkin_ws/src/ras/src/ras_visualizer/request_intervention &");
+    //     sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");
+    // }
 
     if (!wall_pictogram.empty() && !wall_marker.empty())
     {
@@ -103,6 +103,9 @@ void RasVisualizer::subWallCallback(const ras::RasObject &in_obj)
 {
     wall_pictogram.emplace_back(createPictogram(in_obj, 3));
     wall_marker.emplace_back(createMarker(in_obj));
+
+    if( m_ego_twist.linear.x / vehicle_decceleration * beep_timing)
+    sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");
 }
 
 
@@ -232,6 +235,7 @@ jsk_rviz_plugins::Pictogram RasVisualizer::createPictogram(const ras::RasObject 
     float arrow_len;
     std::map <int, std::string> message
     {
+        {0,"fa-question"},
         {4,"fa-user"},
         {6, "fa-car"},
         {10, "block"}
@@ -378,4 +382,9 @@ void RasVisualizer::subJoyInputCallback(const sensor_msgs::Joy &in_joy)
 void RasVisualizer::subInterveneTypeCallback(const std_msgs::Int32 &in_intervene_type)
 {
     intervene_type = in_intervene_type.data;
+}
+
+void RasVisualizer::subOdomCallback(const nav_msgs::Odometry &in_odom)
+{
+    m_ego_twist = in_odom.twist.twist;
 }
