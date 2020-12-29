@@ -410,10 +410,10 @@ int RasCore::findWallWp(std::vector<int> &critical_obj_id_vec)
             {
                 critical_obj_id_vec.emplace_back(obj_id);
                 // wall_wp = e.first;
-                std::cout << "wall wp is :" << e.first << std::endl;
+                // std::cout << "wall wp is :" << e.first << std::endl;
                 return(e.first);
             }
-            std::cout << "rejected wall wp is :" << e.first << std::endl;
+            // std::cout << "rejected wall wp is :" << e.first << std::endl;
 
         }
     }
@@ -479,10 +479,11 @@ void RasCore::manageMarkers()
         wall.object.header.frame_id = obj_array.header.frame_id;
         wall.object.id = obj_array.objects.back().object.id + 1;
         wall.object.pose = m_waypoints[wall_wp];
+        wall.object.pose.position.z += 1.0;
         wall.object.shape.type = shape_msgs::SolidPrimitive::BOX;
-        wall.object.shape.dimensions.emplace_back(1.0);
+        wall.object.shape.dimensions.emplace_back(0.1);
         wall.object.shape.dimensions.emplace_back(5.0);
-        wall.object.shape.dimensions.emplace_back(4.0);
+        wall.object.shape.dimensions.emplace_back(2.0);
         wall.object.classification = derived_object_msgs::Object::CLASSIFICATION_BARRIER;
         wall.is_interaction = false;
         wall.is_important = true;

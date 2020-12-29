@@ -3,23 +3,28 @@
 
 boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 
-RasVisualizer::RasVisualizer(): marker_scale(2.0), vehicle_decceleration(1.96), beep_timing(2.0)
+RasVisualizer::RasVisualizer():
+    marker_scale(2.0),
+    m_vehicle_decceleration(1.96),
+    m_beep_timing(6.0),
+    m_stop_distance_to_object(9.0)
 {
 	ros::NodeHandle n;
     server.reset(new interactive_markers::InteractiveMarkerServer("ras_visualizer_node"));
 
     sub_obj = n.subscribe("managed_objects", 5, &RasVisualizer::subObjCallback, this);
     sub_wall = n.subscribe("wall_object", 5, &RasVisualizer::subWallCallback, this);
-    sub_intervene_type = n.subscribe("intervene_type", 1, &RasVisualizer::subInterveneTypeCallback, this);
+    // sub_intervene_type = n.subscribe("intervene_type", 1, &RasVisualizer::subInterveneTypeCallback, this);
     sub_key_input = n.subscribe("rviz_keyboard_input", 1, &RasVisualizer::subButtonInputCallback, this);
     sub_joy_input = n.subscribe("joy", 1, &RasVisualizer::subJoyInputCallback, this);
+    sub_odom = n.subscribe("/carla/ego_vehicle/odometry", 5, &RasVisualizer::subOdomCallback, this);
     pub_fb_obj = n.advertise<ras::RasObject>("feedback_object", 5);
     pub_box = n.advertise<jsk_recognition_msgs::BoundingBoxArray>("object_box", 5);
 	pub_wall = n.advertise<visualization_msgs::Marker>("wall_marker", 1);
     pub_pictgram = n.advertise<jsk_rviz_plugins::PictogramArray>("pictogram", 5);
     pub_camera_angle = n.advertise<std_msgs::Float32>("carla_camera_angle", 1);
-
-    last_wall_time = ros::Time(0);
+    m_last_touch_time = ros::Time::now();
+    // last_wall_time = ros::Time(0);
 }
 
 
@@ -32,13 +37,14 @@ RasVisualizer::~RasVisualizer()
 void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
 {
     server->clear();
+    m_important_objects.clear();
     // std::vector<int> new_wall_obj_list;
     // wall_obj_list.clear();
 
     jsk_recognition_msgs::BoundingBoxArray box_array;
-    jsk_rviz_plugins::PictogramArray pictogram_array;
-    std_msgs::Float32 critical_obj_direction_from_ego;
-    geometry_msgs::Pose critical_obj_pose;
+    // jsk_rviz_plugins::PictogramArray pictogram_array;
+    // std_msgs::Float32 critical_obj_direction_from_ego;
+    // geometry_msgs::Pose critical_obj_pose;
     bool intervene_beep = false;
 
     for (auto e : in_obj_array.objects)
@@ -49,13 +55,13 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
             if (e.is_important)
             {
                 // show pictgram for target object
-                pictogram_array.pictograms.emplace_back(createPictogram(e, 0));
-                pictogram_array.pictograms.emplace_back(createPictogram(e, 1));
-                pictogram_array.pictograms.emplace_back(createPictogram(e, 2));
+                m_pictogram_list.pictograms.emplace_back(createPictogram(e, 0));
+                m_pictogram_list.pictograms.emplace_back(createPictogram(e, 1));
+                m_pictogram_list.pictograms.emplace_back(createPictogram(e, 2));
 
                 // for camera rotation
-                critical_obj_pose = Ras::tfTransformer(e.object.pose, e.object.header.frame_id, m_ego_name);
-                critical_obj_direction_from_ego.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
+                // critical_obj_pose = Ras::tfTransformer(e.object.pose, e.object.header.frame_id, m_ego_name);
+                // critical_obj_direction_from_ego.data = std::atan(critical_obj_pose.position.x /critical_obj_pose.position.y);
 
                 // avoid beep multiple times (each id should appar only one time in one drivng)
                 // if (!std::count(wall_obj_list.begin(), wall_obj_list.end(), e.object.id))
@@ -64,7 +70,7 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
                 // }
 
                 // pub_camera_angle.publish(critical_obj_direction_from_ego);
-                wall_obj_list.emplace_back(e.object.id);
+                m_important_objects.emplace_back(e.object.id);
                 // new_wall_obj_list.emplace_back(e.object.id);
             }
         }
@@ -77,35 +83,53 @@ void RasVisualizer::subObjCallback(const ras::RasObjectArray &in_obj_array)
     //     sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");
     // }
 
-    if (!wall_pictogram.empty() && !wall_marker.empty())
-    {
-        pictogram_array.pictograms.emplace_back(wall_pictogram[0]);
-        pub_wall.publish(wall_marker[0]);
-        wall_pictogram.pop_back();
-        wall_marker.pop_back();
-    }
-    else
-    {
-        critical_obj_direction_from_ego.data = 0.0;
-        // pub_camera_angle.publish(critical_obj_direction_from_ego);
-    }
+    // if (!wall_pictogram.empty() && !wall_marker.empty())
+    // {
+    //     pictogram_array.pictograms.emplace_back(wall_pictogram[0]);
+    //     pub_wall.publish(wall_marker[0]);
+    //     wall_pictogram.pop_back();
+    //     wall_marker.pop_back();
+    // }
+
+    // else
+    // {
+    //     critical_obj_direction_from_ego.data = 0.0;
+    //     pub_camera_angle.publish(critical_obj_direction_from_ego);
+    // }
 
     box_array.header = in_obj_array.header;
-    pictogram_array.header = in_obj_array.header;
+    m_pictogram_list.header = in_obj_array.header;
 
     server->applyChanges();
     pub_box.publish(box_array);
-    pub_pictgram.publish(pictogram_array);
+    pub_pictgram.publish(m_pictogram_list);
+    m_pictogram_list.pictograms.clear();
 }
 
 
 void RasVisualizer::subWallCallback(const ras::RasObject &in_obj)
 {
-    wall_pictogram.emplace_back(createPictogram(in_obj, 3));
-    wall_marker.emplace_back(createMarker(in_obj));
+    bool is_beep = false;
+    m_pictogram_list.pictograms.emplace_back(createPictogram(in_obj, 3));
+    pub_wall.publish(createMarker(in_obj));
+    // wall_pictogram.emplace_back(createPictogram(in_obj, 3));
+    // wall_marker.emplace_back(createMarker(in_obj));
+    for (auto &important_object_id : m_important_objects)
+    {
+        if (!std::count(m_beeped_object_history.begin(), m_beeped_object_history.end(), important_object_id))
+        {
+            is_beep = true;
+        }
+    }
 
-    if( m_ego_twist.linear.x / vehicle_decceleration * beep_timing)
-    sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");
+    if (!is_beep) return;
+    float beep_distance = m_stop_distance_to_object + m_beep_timing * m_ego_twist.linear.x - 0.5 * pow(m_ego_twist.linear.x, 2) / m_vehicle_decceleration;
+    ROS_INFO("beep distance %f", beep_distance);
+    if ( in_obj.distance < beep_distance )
+    {
+        m_beeped_object_history.insert(m_beeped_object_history.end(), m_important_objects.begin(), m_important_objects.end());
+        sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");
+    }
 }
 
 
@@ -156,7 +180,7 @@ visualization_msgs::Marker RasVisualizer::createMarker(const ras::RasObject &in_
     marker.color.r = 1.0;
     marker.color.g = 1.0;
     marker.color.b = 1.0;
-    marker.color.a = 0.2;
+    marker.color.a = 0.3;
 
     marker.lifetime = ros::Duration(0.1);
     return marker;
@@ -343,46 +367,74 @@ void RasVisualizer::intMarkerCallback(const visualization_msgs::InteractiveMarke
 {
     ras::RasObject feedback_obj;
     std::istringstream sis;
-
+    if (ros::Time::now() - m_last_touch_time < ros::Duration(0.5))
+    {
+        return;
+    }
     std::istringstream(feedback->marker_name) >> feedback_obj.object.id;
     pub_fb_obj.publish(feedback_obj);
+    m_last_touch_time = ros::Time::now();
 }
 
 void RasVisualizer::subButtonInputCallback(const std_msgs::String &in_key)
 {
     ras::RasObject feedback_obj;
-    if (intervene_type != 1) return;
+    // if (intervene_type != 1) return;
     std::cout << in_key.data << (in_key.data != "Return") << std::endl;
     if (in_key.data != "Return") return;
-    for (const auto &e: wall_obj_list)
+    if (!m_important_objects.empty())
     {
-        feedback_obj.object.id = e;
-        pub_fb_obj.publish(feedback_obj);
+        for (const auto &e: m_important_objects)
+        {
+            feedback_obj.object.id = e;
+            pub_fb_obj.publish(feedback_obj);
+        }
+        m_last_intervened_objects = m_important_objects;
+    }
+    else
+    {
+        for (const auto &e: m_last_intervened_objects)
+        {
+            feedback_obj.object.id = e;
+            pub_fb_obj.publish(feedback_obj);
+        }
     }
 }
 
 
 void RasVisualizer::subJoyInputCallback(const sensor_msgs::Joy &in_joy)
 {
-    static int last_joy_input = 0;
+    static int last_joy_input = 0; // latch input
     ras::RasObject feedback_obj;
 
     if (in_joy.buttons[23] == 1 && last_joy_input == 0)
     {
-        for (const auto &e: wall_obj_list)
+        if (!m_important_objects.empty())
         {
-            feedback_obj.object.id = e;
-            pub_fb_obj.publish(feedback_obj);
+            for (const auto &e: m_important_objects)
+            {
+                feedback_obj.object.id = e;
+                pub_fb_obj.publish(feedback_obj);
+            }
+            m_last_intervened_objects = m_important_objects;
+        }
+        else
+        {
+            for (const auto &e: m_last_intervened_objects)
+            {
+                feedback_obj.object.id = e;
+                pub_fb_obj.publish(feedback_obj);
+            }
         }
     }
     std::cout << last_joy_input << std::endl;
     last_joy_input = in_joy.buttons[23];
 }
 
-void RasVisualizer::subInterveneTypeCallback(const std_msgs::Int32 &in_intervene_type)
-{
-    intervene_type = in_intervene_type.data;
-}
+// void RasVisualizer::subInterveneTypeCallback(const std_msgs::Int32 &in_intervene_type)
+// {
+//     intervene_type = in_intervene_type.data;
+// }
 
 void RasVisualizer::subOdomCallback(const nav_msgs::Odometry &in_odom)
 {
