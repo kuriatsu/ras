@@ -199,11 +199,11 @@ std::vector<int> RasCore::findWpOfObj(ras::RasObject &in_obj)
             {
                 dist_of_wp_obj = Ras::calcDistOfPoints(m_waypoints[close_wp].position, in_obj.object.pose.position);
 
-                if (dist_of_wp_obj > 1.0)
-                {
-                    obj_waypoints.emplace_back(close_wp);
-                    pubOccupancyWp(m_waypoints[close_wp].position, 0);
-                }
+                obj_waypoints.emplace_back(close_wp);
+                pubOccupancyWp(m_waypoints[close_wp].position, 0);
+                // if (dist_of_wp_obj > 1.0)
+                // {
+                // }
             }
 
 
