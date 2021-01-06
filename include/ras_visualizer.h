@@ -56,6 +56,7 @@ private:
     float m_vehicle_decceleration; // m/s^2
     geometry_msgs::Twist m_ego_twist;
     float m_beep_timing;
+    float m_min_beep_distance;
     float m_stop_distance_to_object;
 
 public:

@@ -57,13 +57,20 @@ void RasCore::callbackDynamicReconfigure(ras::rasConfig &config, uint32_t lebel)
 void RasCore::subOdomCallback(const nav_msgs::Odometry &in_odom)
 {
     // ROS_INFO("subOdomCallback");
-    float min_dist_power = 9.0, dist;
+    float min_dist_power = 100.0, dist;
     int ego_wp = 0;
     m_ego_pose = in_odom.pose.pose;
     m_ego_twist = in_odom.twist.twist;
     // std::cout << (int)(100.0 / m_wp_interval) << std::endl;
     // find closest waypoint from m_waypoints
     // for (size_t i = m_ego_wp; i < m_ego_wp + (int)(m_max_vision / m_wp_interval); i++)
+
+    if (m_waypoints.empty())
+    {
+        ROS_WARN("waypoint_publisher: waypoint or ego odometry is not subscrived yet");
+        return;
+    }
+
     for (size_t i = 0; i < m_waypoints.size(); i++)
     {
         dist = pow(m_ego_pose.position.x - m_waypoints[i].position.x, 2) + pow(m_ego_pose.position.y - m_waypoints[i].position.y, 2);
@@ -73,6 +80,12 @@ void RasCore::subOdomCallback(const nav_msgs::Odometry &in_odom)
             ego_wp = i;
             min_dist_power = dist;
         }
+    }
+
+    if(ego_wp == 0)
+    {
+        ROS_WARN("ego_vehicle is far from over 10.0 m from route");
+        return;
     }
 
     m_ego_wp = ego_wp;
@@ -89,7 +102,7 @@ void RasCore::subTrajectoryCallback(const autoware_msgs::LaneArray &in_array)
     m_waypoints.clear();
     if (in_array.lanes[0].waypoints.empty())
     {
-        ROS_ERROR("waypoint_publisher: waypoints empty");
+        ROS_WARN("waypoint_publisher: waypoints empty");
         return;
     }
     for (const auto &itr : in_array.lanes[0].waypoints)
@@ -105,12 +118,7 @@ void RasCore::subObjCallback(const derived_object_msgs::ObjectArray &in_obj_arra
     // ROS_INFO("subObjCallback");
     if (m_waypoints.empty())
     {
-        ROS_ERROR("waypoint_publisher: waypoint or ego odometry is not subscrived yet");
-        return;
-    }
-    else if(m_ego_wp == 0)
-    {
-        ROS_ERROR("ego_vehicle is far from over 9.0 m from route");
+        ROS_WARN("waypoint_publisher: waypoint or ego odometry is not subscrived yet");
         return;
     }
 
@@ -334,7 +342,7 @@ bool RasCore::isCollideObstacle(const ras::RasObject &in_obj, const int &wp)
     {
         case derived_object_msgs::Object::CLASSIFICATION_PEDESTRIAN:
         {
-            std::cout << wp << "; " << dist_of_wp_obj << " " << dist_of_wp_ego << " " << dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) << " " << dist_of_wp_ego / m_ego_twist.linear.x << std::endl;
+            // std::cout << wp << "; " << dist_of_wp_obj << " " << dist_of_wp_ego << " " << dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) << " " << dist_of_wp_ego / m_ego_twist.linear.x << std::endl;
 
             // the pedestrian is closer than ego vehicle
             // if (dist_of_wp_obj < dist_of_wp_ego)
@@ -358,7 +366,7 @@ bool RasCore::isCollideObstacle(const ras::RasObject &in_obj, const int &wp)
         case derived_object_msgs::Object::CLASSIFICATION_CAR:
         {
             // return true;
-            std::cout << wp << "; " << dist_of_wp_obj << " " << dist_of_wp_ego << " " << dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) << " " << dist_of_wp_ego / m_ego_twist.linear.x << std::endl;
+            // std::cout << wp << "; " << dist_of_wp_obj << " " << dist_of_wp_ego << " " << dist_of_wp_obj / sqrt(pow(in_obj.object.twist.linear.x, 2) + pow(in_obj.object.twist.linear.y, 2)) << " " << dist_of_wp_ego / m_ego_twist.linear.x << std::endl;
 
             if (m_ego_twist.linear.x == 0.0)
             {
