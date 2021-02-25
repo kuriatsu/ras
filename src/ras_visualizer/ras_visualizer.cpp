@@ -5,10 +5,10 @@ boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 
 RasVisualizer::RasVisualizer():
     marker_scale(2.0),
-    m_vehicle_decceleration(1.47),
+    m_vehicle_deceleration(1.96),
     m_beep_timing(6.0),
     m_stop_distance_to_object(9.0),
-    m_min_beep_distance(50.0)
+    m_deceleration_start_distance(50.0)
 {
 	ros::NodeHandle n;
     server.reset(new interactive_markers::InteractiveMarkerServer("ras_visualizer_node"));
@@ -124,12 +124,13 @@ void RasVisualizer::subWallCallback(const ras::RasObject &in_obj)
     }
 
     if (!is_beep) return;
-    float beep_distance = m_stop_distance_to_object + m_min_beep_distance + m_beep_timing * m_ego_twist.linear.x;
-    // float beep_distance = m_stop_distance_to_object + m_beep_timing * m_ego_twist.linear.x + pow(m_ego_twist.linear.x, 2) / (2 * m_vehicle_decceleration);
-    // float beep_distance = m_stop_distance_to_object + m_beep_timing * m_ego_twist.linear.x + 1.5 * pow(m_ego_twist.linear.x, 2) / m_vehicle_decceleration;
+    float beep_distance = m_deceleration_start_distance + m_beep_timing * m_ego_twist.linear.x;
+    // float beep_distance = m_stop_distance_to_object + pow(m_ego_twist.linear.x, 2) / (2 * m_vehicle_deceleration) + m_beep_timing * m_ego_twist.linear.x;
+    // float beep_distance = m_stop_distance_to_object + m_deceleration_start_distance + m_beep_timing * m_ego_twist.linear.x;
     ROS_INFO("visualizer: beep distance %f, distance %f", beep_distance, in_obj.distance);
-    if ( in_obj.distance < beep_distance || in_obj.distance < m_min_beep_distance)
-    // if ( in_obj.distance < beep_distance || in_obj.distance < m_min_beep_distance)
+    if ( in_obj.distance < beep_distance)
+    // if ( in_obj.distance < beep_distance || in_obj.distance < m_deceleration_start_distance)
+    // if ( in_obj.distance < beep_distance || in_obj.distance < m_deceleration_start_distance)
     {
         m_beeped_object_history.insert(m_beeped_object_history.end(), m_important_objects.begin(), m_important_objects.end());
         sound_client.playWave("/usr/share/sounds/ros_sounds/taionkei.wav");

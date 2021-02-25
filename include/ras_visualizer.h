@@ -53,10 +53,10 @@ private:
     // int intervene_type; // 0:control 1:enter 2:touch
     sound_play::SoundClient sound_client;
 
-    float m_vehicle_decceleration; // m/s^2
+    float m_vehicle_deceleration; // m/s^2
     geometry_msgs::Twist m_ego_twist;
     float m_beep_timing;
-    float m_min_beep_distance;
+    float m_deceleration_start_distance;
     float m_stop_distance_to_object;
 
 public:
